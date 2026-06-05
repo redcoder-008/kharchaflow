@@ -65,40 +65,33 @@ export function FinanceProvider({ children }) {
       console.error("Firestore transactions error: ", err);
     });
 
-    // 2. Budgets Listener
-    const budgetDocRef = doc(db, "users", user.uid, "config", "budgets");
-    const unsubscribeBudget = onSnapshot(budgetDocRef, (docSnap) => {
+    // 2. Unified User Document Listener (Budgets & Initial Balances)
+    const userDocRef = doc(db, "users", user.uid);
+    const unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
       if (docSnap.exists()) {
-        setBudgets(docSnap.data());
+        const data = docSnap.data();
+        if (data.budgets) setBudgets(data.budgets);
+        if (data.initialBalances) setInitialBalances(data.initialBalances);
       } else {
-        // Seed default budgets in Firestore
+        // Fallback: Seed unified document
         const defaultBudgets = localDB.getDefaultBudgets();
-        setDoc(budgetDocRef, defaultBudgets);
-        setBudgets(defaultBudgets);
-      }
-    });
-
-    // 3. Initial Balances Listener
-    const balanceDocRef = doc(db, "users", user.uid, "config", "initialBalances");
-    const unsubscribeBalances = onSnapshot(balanceDocRef, (docSnap) => {
-      if (docSnap.exists()) {
-        setInitialBalances(docSnap.data());
-      } else {
-        // Seed default initial balances in Firestore
         const defaultBalances = localDB.getDefaultInitialBalances();
-        setDoc(balanceDocRef, defaultBalances);
+        setDoc(userDocRef, {
+          budgets: defaultBudgets,
+          initialBalances: defaultBalances
+        }, { merge: true });
+        setBudgets(defaultBudgets);
         setInitialBalances(defaultBalances);
       }
       setLoading(false);
     }, (err) => {
-      console.error("Firestore initial balances error: ", err);
+      console.error("Firestore user doc error: ", err);
       setLoading(false);
     });
 
     return () => {
       unsubscribeTx();
-      unsubscribeBudget();
-      unsubscribeBalances();
+      unsubscribeUserDoc();
     };
   }, [user, isDemoMode]);
 
@@ -196,8 +189,8 @@ export function FinanceProvider({ children }) {
       setBudgets(updatedBudgets);
       
       try {
-        const budgetDocRef = doc(db, "users", user.uid, "config", "budgets");
-        await setDoc(budgetDocRef, updatedBudgets);
+        const userDocRef = doc(db, "users", user.uid);
+        await setDoc(userDocRef, { budgets: updatedBudgets }, { merge: true });
         return true;
       } catch (error) {
         console.error("Update budget error:", error);
@@ -226,8 +219,8 @@ export function FinanceProvider({ children }) {
       setInitialBalances(updatedBalances);
       
       try {
-        const balanceDocRef = doc(db, "users", user.uid, "config", "initialBalances");
-        await setDoc(balanceDocRef, updatedBalances);
+        const userDocRef = doc(db, "users", user.uid);
+        await setDoc(userDocRef, { initialBalances: updatedBalances }, { merge: true });
         return true;
       } catch (error) {
         console.error("Update initial balance error:", error);

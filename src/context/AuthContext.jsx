@@ -8,7 +8,8 @@ import {
   updateProfile as firebaseUpdateProfile,
   onAuthStateChanged 
 } from "firebase/auth";
-import { auth, googleProvider, hasValidConfig } from "../db/firebase";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+import { auth, db, googleProvider, hasValidConfig } from "../db/firebase";
 import { localDB } from "../db/storage";
 
 const AuthContext = createContext();
@@ -135,6 +136,15 @@ export function AuthProvider({ children }) {
       } else {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await firebaseUpdateProfile(userCredential.user, { displayName });
+        
+        const userDocRef = doc(db, "users", userCredential.user.uid);
+        await setDoc(userDocRef, {
+          email: email.toLowerCase(),
+          displayName,
+          budgets: localDB.getDefaultBudgets(),
+          initialBalances: localDB.getDefaultInitialBalances()
+        });
+
         setUser({
           uid: userCredential.user.uid,
           email: userCredential.user.email,
@@ -198,6 +208,18 @@ export function AuthProvider({ children }) {
       } else {
         if (!hasValidConfig) throw new Error("Firebase config not found.");
         const result = await signInWithPopup(auth, googleProvider);
+        
+        const userDocRef = doc(db, "users", result.user.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (!userDoc.exists()) {
+          await setDoc(userDocRef, {
+            email: result.user.email?.toLowerCase() || "",
+            displayName: result.user.displayName || "Fintech User",
+            budgets: localDB.getDefaultBudgets(),
+            initialBalances: localDB.getDefaultInitialBalances()
+          });
+        }
+        
         setLoading(false);
         return result.user;
       }
