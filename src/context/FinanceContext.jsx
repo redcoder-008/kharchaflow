@@ -120,8 +120,20 @@ export function FinanceProvider({ children }) {
       return true;
     } else {
       const txToSave = { ...newTx, uid: user.uid };
-      const docRef = await addDoc(collection(db, "transactions"), txToSave);
-      return docRef.id;
+      const tempId = "temp-" + Date.now();
+      
+      // Optimistic update
+      setTransactions(prev => [{ id: tempId, ...txToSave }, ...prev]);
+      
+      try {
+        const docRef = await addDoc(collection(db, "transactions"), txToSave);
+        return docRef.id;
+      } catch (error) {
+        // Revert optimistic update on error
+        setTransactions(prev => prev.filter(tx => tx.id !== tempId));
+        console.error("Add transaction error:", error);
+        throw error;
+      }
     }
   };
 
@@ -137,9 +149,17 @@ export function FinanceProvider({ children }) {
       localDB.saveTransactions(txList);
       return true;
     } else {
-      const txDocRef = doc(db, "transactions", id);
-      await updateDoc(txDocRef, updated);
-      return true;
+      // Optimistic update
+      setTransactions(prev => prev.map((tx) => (tx.id === id ? { ...tx, ...updated } : tx)));
+      
+      try {
+        const txDocRef = doc(db, "transactions", id);
+        await updateDoc(txDocRef, updated);
+        return true;
+      } catch (error) {
+        console.error("Edit transaction error:", error);
+        throw error;
+      }
     }
   };
 
@@ -150,9 +170,17 @@ export function FinanceProvider({ children }) {
       localDB.saveTransactions(txList);
       return true;
     } else {
-      const txDocRef = doc(db, "transactions", id);
-      await deleteDoc(txDocRef);
-      return true;
+      // Optimistic update
+      setTransactions(prev => prev.filter((tx) => tx.id !== id));
+      
+      try {
+        const txDocRef = doc(db, "transactions", id);
+        await deleteDoc(txDocRef);
+        return true;
+      } catch (error) {
+        console.error("Delete transaction error:", error);
+        throw error;
+      }
     }
   };
 
@@ -164,9 +192,17 @@ export function FinanceProvider({ children }) {
       localDB.saveBudgets(updatedBudgets);
       return true;
     } else {
-      const budgetDocRef = doc(db, "users", user.uid, "config", "budgets");
-      await setDoc(budgetDocRef, updatedBudgets);
-      return true;
+      // Optimistic update
+      setBudgets(updatedBudgets);
+      
+      try {
+        const budgetDocRef = doc(db, "users", user.uid, "config", "budgets");
+        await setDoc(budgetDocRef, updatedBudgets);
+        return true;
+      } catch (error) {
+        console.error("Update budget error:", error);
+        throw error;
+      }
     }
   };
 
@@ -186,9 +222,17 @@ export function FinanceProvider({ children }) {
       localDB.saveInitialBalances(updatedBalances);
       return true;
     } else {
-      const balanceDocRef = doc(db, "users", user.uid, "config", "initialBalances");
-      await setDoc(balanceDocRef, updatedBalances);
-      return true;
+      // Optimistic update
+      setInitialBalances(updatedBalances);
+      
+      try {
+        const balanceDocRef = doc(db, "users", user.uid, "config", "initialBalances");
+        await setDoc(balanceDocRef, updatedBalances);
+        return true;
+      } catch (error) {
+        console.error("Update initial balance error:", error);
+        throw error;
+      }
     }
   };
 
