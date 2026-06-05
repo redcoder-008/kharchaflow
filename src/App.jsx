@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import History from "./pages/History";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
+import Admin from "./pages/Admin";
 import AddTransactionModal from "./components/transactions/AddTransactionModal";
 import { TrendingUp } from "lucide-react";
 
@@ -17,6 +18,13 @@ function AppContent() {
   const { loading: financeLoading } = useFinance();
   const [activePage, setActivePage] = useState("dashboard");
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+
+  // Route protection
+  useEffect(() => {
+    if (user && !user.isAdmin && (activePage === "settings" || activePage === "admin")) {
+      setActivePage("dashboard");
+    }
+  }, [activePage, user]);
 
   // Initialize and apply theme preference
   useEffect(() => {
@@ -66,7 +74,9 @@ function AppContent() {
       case "analytics":
         return <Analytics />;
       case "settings":
-        return <Settings />;
+        return user?.isAdmin ? <Settings /> : <Dashboard />;
+      case "admin":
+        return user?.isAdmin ? <Admin /> : <Dashboard />;
       default:
         return <Dashboard />;
     }

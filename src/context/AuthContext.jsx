@@ -47,7 +47,8 @@ export function AuthProvider({ children }) {
           email: savedProfile.email,
           displayName: savedProfile.displayName,
           photoURL: null,
-          isAnonymous: false
+          isAnonymous: false,
+          isAdmin: true // Demo user is admin by default
         };
         localStorage.setItem("kharchaflow_demo_active_user", JSON.stringify(defaultUser));
         setUser(defaultUser);
@@ -57,14 +58,26 @@ export function AuthProvider({ children }) {
     }
 
     // Live Firebase Authentication Listener
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        let isAdmin = false;
+        try {
+          const userDocRef = doc(db, "users", firebaseUser.uid);
+          const userDoc = await getDoc(userDocRef);
+          if (userDoc.exists()) {
+            isAdmin = userDoc.data().isAdmin === true;
+          }
+        } catch (err) {
+          console.error("Failed to fetch user role: ", err);
+        }
+
         setUser({
           uid: firebaseUser.uid,
           email: firebaseUser.email,
           displayName: firebaseUser.displayName || "Fintech User",
           photoURL: firebaseUser.photoURL,
-          isAnonymous: firebaseUser.isAnonymous
+          isAnonymous: firebaseUser.isAnonymous,
+          isAdmin
         });
       } else {
         setUser(null);
@@ -93,7 +106,8 @@ export function AuthProvider({ children }) {
           uid: "demo-user-123",
           email: email.toLowerCase(),
           displayName: email.toLowerCase() === savedProfile.email.toLowerCase() ? savedProfile.displayName : "Demo User",
-          photoURL: null
+          photoURL: null,
+          isAdmin: true
         };
         
         localStorage.setItem("kharchaflow_demo_active_user", JSON.stringify(demoUser));
@@ -126,7 +140,8 @@ export function AuthProvider({ children }) {
           uid: "demo-user-" + Math.random().toString(36).substring(2, 9),
           email: email.toLowerCase(),
           displayName: displayName,
-          photoURL: null
+          photoURL: null,
+          isAdmin: true
         };
         
         localStorage.setItem("kharchaflow_demo_active_user", JSON.stringify(demoUser));
@@ -142,7 +157,8 @@ export function AuthProvider({ children }) {
           email: email.toLowerCase(),
           displayName,
           budgets: localDB.getDefaultBudgets(),
-          initialBalances: localDB.getDefaultInitialBalances()
+          initialBalances: localDB.getDefaultInitialBalances(),
+          isAdmin: false
         });
 
         setUser({
@@ -194,7 +210,8 @@ export function AuthProvider({ children }) {
           uid: "demo-google-user-789",
           email: "google.karan@kharchaflow.com",
           displayName: "Karan (Google)",
-          photoURL: "https://lh3.googleusercontent.com/a/default-user=s96-c"
+          photoURL: "https://lh3.googleusercontent.com/a/default-user=s96-c",
+          isAdmin: true
         };
         localStorage.setItem("kharchaflow_demo_active_user", JSON.stringify(demoUser));
         localDB.saveProfile({
@@ -216,7 +233,8 @@ export function AuthProvider({ children }) {
             email: result.user.email?.toLowerCase() || "",
             displayName: result.user.displayName || "Fintech User",
             budgets: localDB.getDefaultBudgets(),
-            initialBalances: localDB.getDefaultInitialBalances()
+            initialBalances: localDB.getDefaultInitialBalances(),
+            isAdmin: false
           });
         }
         

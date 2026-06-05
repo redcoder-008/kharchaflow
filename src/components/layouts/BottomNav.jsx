@@ -3,21 +3,34 @@ import {
   Receipt, 
   BarChart3, 
   Settings,
+  ShieldAlert,
+  LogOut,
   Plus
 } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 export default function BottomNav({ activePage, setActivePage, onQuickAddClick }) {
+  const { user, logout } = useAuth();
+
   const menuItems = [
     { id: "dashboard", label: "Overview", icon: LayoutDashboard },
     { id: "history", label: "History", icon: Receipt },
     { id: "placeholder", label: "", icon: null }, // Spacer for FAB
     { id: "analytics", label: "Analytics", icon: BarChart3 },
-    { id: "settings", label: "Settings", icon: Settings },
+    ...(user?.isAdmin ? [
+      { id: "settings", label: "Settings", icon: Settings },
+      { id: "admin", label: "Admin", icon: ShieldAlert }
+    ] : [
+      { id: "logout", label: "Log Out", icon: LogOut, action: "logout" }
+    ])
   ];
 
   return (
     <nav className="fixed bottom-0 inset-x-0 bg-zinc-900 border-t border-zinc-800/80 md:hidden z-30 h-16.5 pb-safe">
-      <div className="relative h-full grid grid-cols-5 max-w-md mx-auto items-center px-2">
+      <div 
+        className="relative h-full grid max-w-md mx-auto items-center px-2"
+        style={{ gridTemplateColumns: `repeat(${menuItems.length}, minmax(0, 1fr))` }}
+      >
         {menuItems.map((item) => {
           if (item.id === "placeholder") {
             return (
@@ -38,7 +51,7 @@ export default function BottomNav({ activePage, setActivePage, onQuickAddClick }
           return (
             <button
               key={item.id}
-              onClick={() => setActivePage(item.id)}
+              onClick={() => item.action === "logout" ? logout() : setActivePage(item.id)}
               className="flex flex-col items-center justify-center gap-1 h-full py-1 text-center"
             >
               <Icon className={`w-5 h-5 transition-all ${
