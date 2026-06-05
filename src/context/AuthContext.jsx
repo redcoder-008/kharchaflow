@@ -22,9 +22,13 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isDemoMode, setIsDemoMode] = useState(() => {
-    // Default to demo mode if there is no valid Firebase config, or if localStorage has demo mode set to true
-    if (!hasValidConfig) return true;
-    return localDB.getIsDemoMode();
+git checkout fcafa8c~1 -- src/db/storage.js    if (!hasValidConfig) return true;
+    const savedDemoMode = localStorage.getItem("kharchaflow_demo_mode");
+    if (savedDemoMode === null) {
+      // Default to Live cloud sync mode when a valid Firebase configuration is predefined
+      return false;
+    }
+    return savedDemoMode === "true";
   });
 
   // Track Firebase state if config is valid and not running in demo mode

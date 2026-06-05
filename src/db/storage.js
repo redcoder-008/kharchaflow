@@ -1,147 +1,48 @@
-// Seed data to make the dashboard look highly professional and populated from day one
-const DEFAULT_TRANSACTIONS = [
-  {
-    id: "tx-seed-1",
-    amount: 3200.00,
-    type: "income",
-    category: "Income",
-    date: "2026-05-01",
-    paymentMethod: "Bank Account",
-    provider: "Everest Bank",
-    notes: "Monthly Software Engineer Salary",
-    createdAt: new Date("2026-05-01T10:00:00Z").toISOString()
-  },
-  {
-    id: "tx-seed-2",
-    amount: 12.50,
-    type: "expense",
-    category: "Food",
-    date: "2026-05-20",
-    paymentMethod: "eWallet",
-    provider: "eSewa",
-    notes: "Lunch at Burger House",
-    createdAt: new Date("2026-05-20T13:15:00Z").toISOString()
-  },
-  {
-    id: "tx-seed-3",
-    amount: 75.00,
-    type: "expense",
-    category: "Bills",
-    date: "2026-05-15",
-    paymentMethod: "Bank Account",
-    provider: "Nabil Bank",
-    notes: "Electricity and Water Bills",
-    createdAt: new Date("2026-05-15T09:30:00Z").toISOString()
-  },
-  {
-    id: "tx-seed-4",
-    amount: 8.00,
-    type: "expense",
-    category: "Transport",
-    date: "2026-05-21",
-    paymentMethod: "Cash",
-    provider: "",
-    notes: "Taxi to office",
-    createdAt: new Date("2026-05-21T08:45:00Z").toISOString()
-  },
-  {
-    id: "tx-seed-5",
-    amount: 68.40,
-    type: "expense",
-    category: "Shopping",
-    date: "2026-05-18",
-    paymentMethod: "Mobile Banking",
-    provider: "Global IME Bank",
-    notes: "Weekly grocery at Bhatbhateni",
-    createdAt: new Date("2026-05-18T16:20:00Z").toISOString()
-  },
-  {
-    id: "tx-seed-6",
-    amount: 15.00,
-    type: "expense",
-    category: "Entertainment",
-    date: "2026-05-14",
-    paymentMethod: "Credit Card",
-    provider: "",
-    notes: "Netflix Premium Subscription",
-    createdAt: new Date("2026-05-14T21:00:00Z").toISOString()
-  },
-  {
-    id: "tx-seed-7",
-    amount: 450.00,
-    type: "income",
-    category: "Income",
-    date: "2026-05-10",
-    paymentMethod: "eWallet",
-    provider: "Khalti",
-    notes: "Payment for freelance UI work",
-    createdAt: new Date("2026-05-10T11:30:00Z").toISOString()
-  },
-  {
-    id: "tx-seed-8",
-    amount: 45.00,
-    type: "expense",
-    category: "Health",
-    date: "2026-05-05",
-    paymentMethod: "Bank Account",
-    provider: "NIC Asia Bank",
-    notes: "Routine medical checkup & medicines",
-    createdAt: new Date("2026-05-05T10:15:00Z").toISOString()
-  },
-  {
-    id: "tx-seed-9",
-    amount: 25.00,
-    type: "expense",
-    category: "Education",
-    date: "2026-05-12",
-    paymentMethod: "eWallet",
-    provider: "IME Pay",
-    notes: "Bought Next.js Advanced Course on Udemy",
-    createdAt: new Date("2026-05-12T14:40:00Z").toISOString()
-  }
-];
+// Fresh template data with no seeded transactions and zeroed balances
+const DEFAULT_TRANSACTIONS = [];
 
 const DEFAULT_BUDGETS = {
-  Food: 300,
-  Transport: 100,
-  Shopping: 400,
-  Bills: 200,
-  Entertainment: 150,
-  Education: 100,
-  Health: 150,
-  Others: 150
+  Food: 0,
+  Transport: 0,
+  Shopping: 0,
+  Bills: 0,
+  Entertainment: 0,
+  Education: 0,
+  Health: 0,
+  Others: 0
 };
 
 const DEFAULT_PROFILE = {
-  displayName: "Karan Admin",
-  email: "karan@kharchaflow.com",
+  displayName: "Fintech User",
+  email: "user@kharchaflow.com",
   photoURL: null
 };
 
-// Initial state of balances mapped to payment methods
+// Initial state of balances mapped to payment methods (all default to zero)
 const DEFAULT_INITIAL_BALANCES = {
-  "Cash": 250.00,
-  "Credit Card": -120.00, // Credit limit utilization or negative outstanding
+  "Cash": 0.00,
+  "Credit Card": 0.00,
   "Bank Account": {
-    "Global IME Bank": 1500.00,
-    "Nabil Bank": 850.00,
-    "NIC Asia Bank": 430.00,
-    "Prabhu Bank": 200.00,
-    "Everest Bank": 3200.00,
+    "Global IME Bank": 0.00,
+    "Nabil Bank": 0.00,
+    "NIC Asia Bank": 0.00,
+    "Prabhu Bank": 0.00,
+    "Everest Bank": 0.00,
   },
   "eWallet": {
-    "eSewa": 340.50,
-    "Khalti": 490.00,
-    "IME Pay": 95.00
+    "eSewa": 0.00,
+    "Khalti": 0.00,
+    "IME Pay": 0.00
   },
   "Mobile Banking": {
-    "Global IME Bank": 500.00,
-    "Nabil Bank": 250.00,
-    "NIC Asia Bank": 150.00,
-    "Prabhu Bank": 100.00,
-    "Everest Bank": 300.00
+    "Global IME Bank": 0.00,
+    "Nabil Bank": 0.00,
+    "NIC Asia Bank": 0.00,
+    "Prabhu Bank": 0.00,
+    "Everest Bank": 0.00
   }
 };
+
 
 export const localDB = {
   getTransactions: () => {
