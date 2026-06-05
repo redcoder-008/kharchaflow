@@ -63,8 +63,7 @@ export function FinanceProvider({ children }) {
 
     // 1. Transactions Listener
     const txQuery = query(
-      collection(db, "transactions"),
-      where("uid", "==", user.uid),
+      collection(db, "users", user.uid, "transactions"),
       orderBy("date", "desc")
     );
 
@@ -132,7 +131,7 @@ export function FinanceProvider({ children }) {
       setTransactions(prev => [{ id: tempId, ...txToSave }, ...prev]);
       
       try {
-        const docRef = await addDoc(collection(db, "transactions"), txToSave);
+        const docRef = await addDoc(collection(db, "users", user.uid, "transactions"), txToSave);
         return docRef.id;
       } catch (error) {
         // Revert optimistic update on error
@@ -159,7 +158,7 @@ export function FinanceProvider({ children }) {
       setTransactions(prev => prev.map((tx) => (tx.id === id ? { ...tx, ...updated } : tx)));
       
       try {
-        const txDocRef = doc(db, "transactions", id);
+        const txDocRef = doc(db, "users", user.uid, "transactions", id);
         await updateDoc(txDocRef, updated);
         return true;
       } catch (error) {
@@ -180,7 +179,7 @@ export function FinanceProvider({ children }) {
       setTransactions(prev => prev.filter((tx) => tx.id !== id));
       
       try {
-        const txDocRef = doc(db, "transactions", id);
+        const txDocRef = doc(db, "users", user.uid, "transactions", id);
         await deleteDoc(txDocRef);
         return true;
       } catch (error) {
