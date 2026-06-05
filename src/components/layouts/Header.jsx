@@ -1,10 +1,6 @@
-import React from "react";
 import { 
   CloudLightning, 
-  Settings, 
-  Menu,
-  TrendingUp,
-  User
+  TrendingUp
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 

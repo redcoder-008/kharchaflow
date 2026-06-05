@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useFinance } from "../context/FinanceContext";
 import { formatCurrency, formatDate } from "../utils/helpers";
-import { CATEGORIES, PAYMENT_METHODS } from "../utils/constants";
+import { CATEGORIES } from "../utils/constants";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -24,9 +24,7 @@ import {
   BarChart, 
   Bar, 
   XAxis, 
-  YAxis, 
-  Tooltip, 
-  Legend 
+  Tooltip 
 } from "recharts";
 import AddTransactionModal from "../components/transactions/AddTransactionModal";
 

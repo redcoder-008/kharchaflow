@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useMemo } from "react";
 import { useAuth } from "./AuthContext";
 import { localDB } from "../db/storage";
-import { db, hasValidConfig } from "../db/firebase";
+import { db } from "../db/firebase";
 import { 
   collection, 
   query, 
@@ -193,7 +193,7 @@ export function FinanceProvider({ children }) {
   };
 
   // Live Ledger Balance Calculation Layer
-  const currentBalances = React.useMemo(() => {
+  const currentBalances = useMemo(() => {
     if (Object.keys(initialBalances).length === 0) return {};
     
     const computed = JSON.parse(JSON.stringify(initialBalances));
@@ -230,7 +230,7 @@ export function FinanceProvider({ children }) {
   }, [transactions, initialBalances]);
 
   // Aggregate balance calculations
-  const totals = React.useMemo(() => {
+  const totals = useMemo(() => {
     let totalBalance = 0;
     let bankTotal = 0;
     let walletTotal = 0;

@@ -1,13 +1,8 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useFinance } from "../../context/FinanceContext";
 import { CATEGORIES, PAYMENT_METHODS, EWALLET_PROVIDERS, BANK_PROVIDERS } from "../../utils/constants";
 import { 
   X, 
-  Coins, 
-  Wallet, 
-  Smartphone, 
-  Landmark, 
-  CreditCard,
   Calendar,
   FileText,
   TrendingUp,

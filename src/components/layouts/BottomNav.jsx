@@ -1,4 +1,3 @@
-import React from "react";
 import { 
   LayoutDashboard, 
   Receipt, 
@@ -19,7 +18,7 @@ export default function BottomNav({ activePage, setActivePage, onQuickAddClick }
   return (
     <nav className="fixed bottom-0 inset-x-0 bg-zinc-900 border-t border-zinc-800/80 md:hidden z-30 h-16.5 pb-safe">
       <div className="relative h-full grid grid-cols-5 max-w-md mx-auto items-center px-2">
-        {menuItems.map((item, index) => {
+        {menuItems.map((item) => {
           if (item.id === "placeholder") {
             return (
               <div key="placeholder-fab" className="flex items-center justify-center -translate-y-4">

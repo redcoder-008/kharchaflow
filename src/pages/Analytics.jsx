@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { useFinance } from "../context/FinanceContext";
 import { formatCurrency } from "../utils/helpers";
 import { CATEGORIES } from "../utils/constants";
@@ -14,8 +14,7 @@ import {
   AlertTriangle, 
   Sparkles, 
   ShieldCheck, 
-  Coins, 
-  BookOpen 
+  Coins
 } from "lucide-react";
 
 export default function Analytics() {

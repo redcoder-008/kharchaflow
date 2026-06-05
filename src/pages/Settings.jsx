@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useFinance } from "../context/FinanceContext";
 import { reloadFirebaseApp } from "../db/firebase";
 import { localDB } from "../db/storage";
 import { 
   User, 
-  Settings as SettingsIcon, 
   Cloud, 
   Moon, 
   Sun, 
@@ -13,13 +12,12 @@ import {
   Sliders, 
   LogOut,
   RefreshCw,
-  AlertTriangle,
   CheckCircle,
   HelpCircle
 } from "lucide-react";
 
 export default function Settings() {
-  const { user, isDemoMode, logout, updateProfileName, toggleDemoMode } = useAuth();
+  const { user, isDemoMode, logout, updateProfileName } = useAuth();
   const { budgets, updateBudget } = useFinance();
 
   // Profile fields

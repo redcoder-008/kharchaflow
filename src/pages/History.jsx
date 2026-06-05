@@ -1,16 +1,14 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useFinance } from "../context/FinanceContext";
 import { formatCurrency, formatDate } from "../utils/helpers";
 import { CATEGORIES } from "../utils/constants";
 import { 
   Search, 
-  Filter, 
   Edit2, 
   Trash2, 
   AlertCircle,
   X,
-  SlidersHorizontal,
-  ChevronDown
+  SlidersHorizontal
 } from "lucide-react";
 import AddTransactionModal from "../components/transactions/AddTransactionModal";
 
