@@ -1,7 +1,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { localDB } from "./storaage";
+import { localDB } from "./storage";
 import { TestTube } from "lucide-react";
 
 let app = null;
