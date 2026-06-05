@@ -45,6 +45,8 @@ const DEFAULT_INITIAL_BALANCES = {
 
 
 export const localDB = {
+  getDefaultBudgets: () => DEFAULT_BUDGETS,
+  getDefaultInitialBalances: () => DEFAULT_INITIAL_BALANCES,
   getTransactions: () => {
     const txs = localStorage.getItem("kharchaflow_transactions");
     if (!txs) {

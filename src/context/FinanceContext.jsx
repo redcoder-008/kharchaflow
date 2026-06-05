@@ -72,7 +72,7 @@ export function FinanceProvider({ children }) {
         setBudgets(docSnap.data());
       } else {
         // Seed default budgets in Firestore
-        const defaultBudgets = localDB.getBudgets();
+        const defaultBudgets = localDB.getDefaultBudgets();
         setDoc(budgetDocRef, defaultBudgets);
         setBudgets(defaultBudgets);
       }
@@ -85,7 +85,7 @@ export function FinanceProvider({ children }) {
         setInitialBalances(docSnap.data());
       } else {
         // Seed default initial balances in Firestore
-        const defaultBalances = localDB.getInitialBalances();
+        const defaultBalances = localDB.getDefaultInitialBalances();
         setDoc(balanceDocRef, defaultBalances);
         setInitialBalances(defaultBalances);
       }
