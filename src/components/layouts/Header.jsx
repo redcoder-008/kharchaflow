@@ -32,14 +32,12 @@ export default function Header({ activePage, setActivePage }) {
           <CloudLightning className="w-4 h-4 text-emerald-400 stroke-[2]" />
           <p className="text-xs font-medium text-emerald-300">
             Offline Demo Mode. Connect your own Firebase database in{" "}
-            {user?.isAdmin ? (
-              <button 
-                onClick={() => setActivePage("settings")} 
-                className="underline font-semibold text-emerald-400 hover:text-emerald-300"
-              >
-                settings
-              </button>
-            ) : "settings"}{" "}
+            <button 
+              onClick={() => setActivePage("settings")} 
+              className="underline font-semibold text-emerald-400 hover:text-emerald-300"
+            >
+              settings
+            </button>{" "}
             to sync data across devices.
           </p>
         </div>
@@ -72,8 +70,8 @@ export default function Header({ activePage, setActivePage }) {
 
             {/* User Profile Avatar */}
             <button
-              onClick={() => user?.isAdmin && setActivePage("settings")}
-              className={`flex items-center gap-2.5 p-1 bg-zinc-900 border border-zinc-850 rounded-full md:rounded-xl md:px-3 md:py-1.5 transition-all outline-none ${user?.isAdmin ? "cursor-pointer hover:border-zinc-800" : "cursor-default"}`}
+              onClick={() => setActivePage("settings")}
+              className="flex items-center gap-2.5 p-1 bg-zinc-900 border border-zinc-850 hover:border-zinc-800 rounded-full md:rounded-xl md:px-3 md:py-1.5 transition-all outline-none"
             >
               <div className="w-7 h-7 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center font-bold text-emerald-400 text-xs">
                 {user.displayName ? user.displayName.split(" ").map(n => n[0]).join("").toUpperCase() : "CF"}

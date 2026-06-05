@@ -18,8 +18,8 @@ export default function Sidebar({ activePage, setActivePage }) {
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "history", label: "History", icon: Receipt },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
+    { id: "settings", label: "Settings", icon: Settings },
     ...(user?.isAdmin ? [
-      { id: "settings", label: "Settings", icon: Settings },
       { id: "admin", label: "Admin", icon: ShieldAlert }
     ] : [])
   ];

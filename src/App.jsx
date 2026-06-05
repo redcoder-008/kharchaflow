@@ -21,7 +21,7 @@ function AppContent() {
 
   // Route protection
   useEffect(() => {
-    if (user && !user.isAdmin && (activePage === "settings" || activePage === "admin")) {
+    if (user && !user.isAdmin && activePage === "admin") {
       setActivePage("dashboard");
     }
   }, [activePage, user]);
@@ -74,7 +74,7 @@ function AppContent() {
       case "analytics":
         return <Analytics />;
       case "settings":
-        return user?.isAdmin ? <Settings /> : <Dashboard />;
+        return <Settings />;
       case "admin":
         return user?.isAdmin ? <Admin /> : <Dashboard />;
       default:

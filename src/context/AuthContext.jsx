@@ -6,9 +6,11 @@ import {
   signInWithPopup, 
   sendPasswordResetEmail,
   updateProfile as firebaseUpdateProfile,
+  updatePassword,
+  deleteUser,
   onAuthStateChanged 
 } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { auth, db, googleProvider, hasValidConfig } from "../db/firebase";
 import { localDB } from "../db/storage";
 
@@ -48,7 +50,9 @@ export function AuthProvider({ children }) {
           displayName: savedProfile.displayName,
           photoURL: null,
           isAnonymous: false,
-          isAdmin: true // Demo user is admin by default
+          isAdmin: true,
+          phone: "",
+          language: "en"
         };
         localStorage.setItem("kharchaflow_demo_active_user", JSON.stringify(defaultUser));
         setUser(defaultUser);
@@ -61,11 +65,16 @@ export function AuthProvider({ children }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         let isAdmin = false;
+        let phone = "";
+        let language = "en";
         try {
           const userDocRef = doc(db, "users", firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
           if (userDoc.exists()) {
-            isAdmin = userDoc.data().isAdmin === true;
+            const data = userDoc.data();
+            isAdmin = data.isAdmin === true;
+            phone = data.phone || "";
+            language = data.language || "en";
           }
         } catch (err) {
           console.error("Failed to fetch user role: ", err);
@@ -77,7 +86,9 @@ export function AuthProvider({ children }) {
           displayName: firebaseUser.displayName || "Fintech User",
           photoURL: firebaseUser.photoURL,
           isAnonymous: firebaseUser.isAnonymous,
-          isAdmin
+          isAdmin,
+          phone,
+          language
         });
       } else {
         setUser(null);
@@ -265,27 +276,82 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const updateProfileName = async (newDisplayName) => {
+  const updateUserProfile = async (data) => {
     setError(null);
     try {
       if (isDemoMode) {
         const savedProfile = localDB.getProfile();
-        const updated = { ...savedProfile, displayName: newDisplayName };
-        localDB.saveProfile(updated);
+        const updatedProfile = { ...savedProfile, ...data };
+        localDB.saveProfile(updatedProfile);
         
-        const updatedUser = { ...user, displayName: newDisplayName };
+        const updatedUser = { ...user, ...data };
         localStorage.setItem("kharchaflow_demo_active_user", JSON.stringify(updatedUser));
         setUser(updatedUser);
         return true;
       } else {
         if (auth.currentUser) {
-          await firebaseUpdateProfile(auth.currentUser, { displayName: newDisplayName });
-          setUser(prev => ({ ...prev, displayName: newDisplayName }));
+          const promises = [];
+          const authUpdates = {};
+          if (data.displayName !== undefined) authUpdates.displayName = data.displayName;
+          if (data.photoURL !== undefined) authUpdates.photoURL = data.photoURL;
+          
+          if (Object.keys(authUpdates).length > 0) {
+            promises.push(firebaseUpdateProfile(auth.currentUser, authUpdates));
+          }
+
+          const docUpdates = {};
+          if (data.phone !== undefined) docUpdates.phone = data.phone;
+          if (data.language !== undefined) docUpdates.language = data.language;
+          if (data.displayName !== undefined) docUpdates.displayName = data.displayName;
+          
+          if (Object.keys(docUpdates).length > 0) {
+            const userDocRef = doc(db, "users", auth.currentUser.uid);
+            promises.push(updateDoc(userDocRef, docUpdates));
+          }
+          
+          await Promise.all(promises);
+          setUser(prev => ({ ...prev, ...data }));
           return true;
         }
       }
     } catch (err) {
-      setError(err.message || "Failed to update profile name.");
+      setError(err.message || "Failed to update profile.");
+      throw err;
+    }
+  };
+
+  const updateUserPassword = async (newPassword) => {
+    setError(null);
+    try {
+      if (isDemoMode) return true;
+      if (auth.currentUser) {
+        await updatePassword(auth.currentUser, newPassword);
+        return true;
+      }
+    } catch (err) {
+      setError(err.message || "Failed to update password.");
+      throw err;
+    }
+  };
+
+  const deleteUserAccount = async () => {
+    setError(null);
+    try {
+      if (isDemoMode) {
+        localStorage.removeItem("kharchaflow_demo_active_user");
+        setUser(null);
+        return true;
+      } else {
+        if (auth.currentUser) {
+          const uid = auth.currentUser.uid;
+          await deleteDoc(doc(db, "users", uid));
+          await deleteUser(auth.currentUser);
+          setUser(null);
+          return true;
+        }
+      }
+    } catch (err) {
+      setError(err.message || "Failed to delete account.");
       throw err;
     }
   };
@@ -313,7 +379,9 @@ export function AuthProvider({ children }) {
     logout,
     signInWithGoogle,
     resetPassword,
-    updateProfileName,
+    updateUserProfile,
+    updateUserPassword,
+    deleteUserAccount,
     toggleDemoMode
   };
 

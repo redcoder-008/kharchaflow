@@ -17,12 +17,10 @@ export default function BottomNav({ activePage, setActivePage, onQuickAddClick }
     { id: "history", label: "History", icon: Receipt },
     { id: "placeholder", label: "", icon: null }, // Spacer for FAB
     { id: "analytics", label: "Analytics", icon: BarChart3 },
+    { id: "settings", label: "Settings", icon: Settings },
     ...(user?.isAdmin ? [
-      { id: "settings", label: "Settings", icon: Settings },
       { id: "admin", label: "Admin", icon: ShieldAlert }
-    ] : [
-      { id: "logout", label: "Log Out", icon: LogOut, action: "logout" }
-    ])
+    ] : [])
   ];
 
   return (

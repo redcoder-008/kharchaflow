@@ -13,15 +13,20 @@ import {
   LogOut,
   RefreshCw,
   CheckCircle,
-  HelpCircle
+  HelpCircle,
+  Shield,
+  Trash2
 } from "lucide-react";
 
 export default function Settings() {
-  const { user, isDemoMode, logout, updateProfileName } = useAuth();
+  const { user, isDemoMode, logout, updateUserProfile, updateUserPassword, deleteUserAccount } = useAuth();
   const { budgets, updateBudget } = useFinance();
 
   // Profile fields
-  const [displayName, setDisplayName] = useState(user?.displayName || "");
+  const [displayName, setDisplayName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [language, setLanguage] = useState("");
+  const [photoURL, setPhotoURL] = useState("");
   const [profileSuccess, setProfileSuccess] = useState(false);
   const [profileError, setProfileError] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
@@ -49,6 +54,9 @@ export default function Settings() {
   useEffect(() => {
     if (user) {
       setDisplayName(user.displayName || "");
+      setPhone(user.phone || "");
+      setLanguage(user.language || "en");
+      setPhotoURL(user.photoURL || "");
     }
   }, [user]);
 
@@ -97,7 +105,12 @@ export default function Settings() {
 
     setProfileSaving(true);
     try {
-      await updateProfileName(displayName.trim());
+      await updateUserProfile({
+        displayName: displayName.trim(),
+        phone: phone.trim(),
+        language,
+        photoURL: photoURL.trim()
+      });
       setProfileSuccess(true);
       setTimeout(() => setProfileSuccess(false), 3000);
     } catch (err) {
@@ -105,6 +118,45 @@ export default function Settings() {
       setProfileError("Failed to update profile name.");
     } finally {
       setProfileSaving(false);
+    }
+  };
+
+  const [password, setPassword] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+
+  const handlePasswordSave = async (e) => {
+    e.preventDefault();
+    setPasswordError("");
+    setPasswordSuccess(false);
+    
+    if (!password.trim() || password.length < 6) {
+      setPasswordError("Password must be at least 6 characters.");
+      return;
+    }
+
+    setPasswordSaving(true);
+    try {
+      await updateUserPassword(password);
+      setPasswordSuccess(true);
+      setPassword("");
+      setTimeout(() => setPasswordSuccess(false), 3000);
+    } catch (err) {
+      console.error(err);
+      setPasswordError("Failed to update password. You may need to log out and log back in.");
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (confirm("Are you absolutely sure you want to delete your account? This action cannot be undone and will permanently erase your data.")) {
+      try {
+        await deleteUserAccount();
+      } catch (err) {
+        alert("Failed to delete account. You may need to log out and log back in first.");
+      }
     }
   };
 
@@ -223,6 +275,47 @@ export default function Settings() {
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="phone-settings" className="finance-label">Phone Number</label>
+                  <input
+                    id="phone-settings"
+                    type="tel"
+                    placeholder="+1 234 567 890"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    disabled={profileSaving}
+                    className="finance-input"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="language-settings" className="finance-label">Language</label>
+                  <select
+                    id="language-settings"
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value)}
+                    disabled={profileSaving}
+                    className="finance-input h-10 py-0"
+                  >
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label htmlFor="photoURL-settings" className="finance-label">Profile Picture URL</label>
+                <input
+                  id="photoURL-settings"
+                  type="url"
+                  placeholder="https://example.com/avatar.jpg"
+                  value={photoURL}
+                  onChange={(e) => setPhotoURL(e.target.value)}
+                  disabled={profileSaving}
+                  className="finance-input"
+                />
+              </div>
+
               <div className="flex gap-3 pt-2">
                 <button
                   type="submit"
@@ -313,11 +406,12 @@ export default function Settings() {
         <div className="space-y-6">
           
           {/* Cloud Database Integration Form */}
-          <div className="finance-card">
-            <h4 className="text-xs font-bold text-white tracking-tight uppercase border-b border-zinc-800/60 pb-3.5 mb-5 flex items-center gap-2">
-              <Cloud className="w-4 h-4 text-emerald-400" />
-              Cloud Database Integration (Firebase)
-            </h4>
+          {user?.isAdmin && (
+            <div className="finance-card">
+              <h4 className="text-xs font-bold text-white tracking-tight uppercase border-b border-zinc-800/60 pb-3.5 mb-5 flex items-center gap-2">
+                <Cloud className="w-4 h-4 text-emerald-400" />
+                Cloud Database Integration (Firebase)
+              </h4>
 
             {isDemoMode ? (
               <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl text-emerald-300 text-xs mb-5 space-y-2.5">
@@ -439,22 +533,76 @@ export default function Settings() {
               </div>
             </form>
           </div>
+          )}
+
+          {/* Security & Password */}
+          <div className="finance-card">
+            <h4 className="text-xs font-bold text-white tracking-tight uppercase border-b border-zinc-800/60 pb-3.5 mb-5 flex items-center gap-2">
+              <Shield className="w-4 h-4 text-emerald-400" />
+              Security Settings
+            </h4>
+
+            {passwordError && (
+              <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/25 rounded-xl text-rose-400 text-xs font-semibold">
+                {passwordError}
+              </div>
+            )}
+            {passwordSuccess && (
+              <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/25 rounded-xl text-emerald-400 text-xs font-semibold flex items-center gap-2">
+                <CheckCircle className="w-4 h-4" />
+                Password updated successfully!
+              </div>
+            )}
+
+            <form onSubmit={handlePasswordSave} className="space-y-4">
+              <div>
+                <label htmlFor="new-password" className="finance-label">New Password</label>
+                <input
+                  id="new-password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={passwordSaving}
+                  className="finance-input"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={passwordSaving}
+                className="w-full bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-zinc-100 font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs transition-colors"
+              >
+                <Save className="w-3.5 h-3.5" />
+                Update Password
+              </button>
+            </form>
+          </div>
 
           {/* Quick Sign Out Action */}
           <div className="finance-card">
             <h4 className="text-xs font-bold text-white tracking-tight uppercase border-b border-zinc-800/60 pb-3.5 mb-4">
-              Termination
+              Danger Zone
             </h4>
             <p className="text-xs text-zinc-400 mb-4 leading-normal">
               Terminates your current session and clears local credentials. Transactions inside LocalStorage are preserved.
             </p>
-            <button
-              onClick={logout}
-              className="w-full bg-zinc-950 hover:bg-rose-500/5 text-rose-400 hover:text-rose-450 border border-zinc-800 hover:border-rose-500/10 font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs transition-all"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              Sign out of KharchaFlow
-            </button>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={logout}
+                className="w-full bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-zinc-300 border border-zinc-800 hover:border-zinc-700 font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs transition-all"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                Sign out of KharchaFlow
+              </button>
+              
+              <button
+                onClick={handleDeleteAccount}
+                className="w-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/20 hover:border-rose-500/30 font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs transition-all"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete Account
+              </button>
+            </div>
           </div>
 
         </div>
