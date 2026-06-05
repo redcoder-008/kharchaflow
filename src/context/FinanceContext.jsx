@@ -31,7 +31,7 @@ export function FinanceProvider({ children }) {
 
   // Load configuration & data
   useEffect(() => {
-    if (isDemoMode || !user) {
+    if (isDemoMode) {
       // LocalStorage Demo Mode Data Sync
       setTransactions(localDB.getTransactions());
       setBudgets(localDB.getBudgets());
@@ -39,6 +39,19 @@ export function FinanceProvider({ children }) {
       setLoading(false);
       return;
     }
+
+    if (!user) {
+      setTransactions([]);
+      setBudgets({});
+      setInitialBalances({});
+      setLoading(false);
+      return;
+    }
+
+    // Clear state before live sync to prevent data leakage from previous users
+    setTransactions([]);
+    setBudgets({});
+    setInitialBalances({});
 
     // Live Firebase Firestore Sync
     if (!db) {
