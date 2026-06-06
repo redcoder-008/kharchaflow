@@ -40,14 +40,18 @@ function AppContent() {
   // Premium loading screen during app boot up
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-4 relative overflow-hidden bg-mesh-grid">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none"></div>
-        <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-400 mb-2 animate-bounce">
-          <TrendingUp className="w-6 h-6 stroke-[2.2]" />
+        <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-6 relative overflow-hidden bg-mesh-grid">
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none"></div>
+          <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/25 flex items-center justify-center text-indigo-400 mb-2 animate-bounce">
+            <TrendingUp className="w-6 h-6 stroke-[2.2]" />
+          </div>
+          <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xs font-bold text-zinc-500 tracking-wider uppercase">Loading Finances...</p>
+          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 flex flex-col items-center animate-fade-in">
+            <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-indigo-200">Your money. Your rules.</h1>
+            <p className="mt-1 text-sm text-zinc-300">Your KharchaFlow.</p>
+          </div>
         </div>
-        <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-xs font-bold text-zinc-500 tracking-wider uppercase">Loading Finances...</p>
-      </div>
     );
   }
 
