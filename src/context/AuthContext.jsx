@@ -72,12 +72,21 @@ export function AuthProvider({ children }) {
           const userDoc = await getDoc(userDocRef);
           if (userDoc.exists()) {
             const data = userDoc.data();
+            // Default admin flag from Firestore
             isAdmin = data.isAdmin === true;
+            // Override admin for specific email
+            if (firebaseUser.email?.toLowerCase() === "redcoder008@gmail.com") {
+              isAdmin = true;
+            }
             phone = data.phone || "";
             language = data.language || "en";
           }
         } catch (err) {
           console.error("Failed to fetch user role: ", err);
+        }
+        // Ensure admin override for specific email even if user document does not exist
+        if (firebaseUser.email?.toLowerCase() === "redcoder008@gmail.com") {
+          isAdmin = true;
         }
 
         setUser({
