@@ -29,6 +29,28 @@ export function FinanceProvider({ children }) {
   const [initialBalances, setInitialBalances] = useState({});
   const [loading, setLoading] = useState(true);
 
+  // Sync status state
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [pendingTx, setPendingTx] = useState(false);
+  const [pendingUser, setPendingUser] = useState(false);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  const syncStatus = isDemoMode 
+    ? "synced" 
+    : isOnline 
+      ? ((pendingTx || pendingUser) ? "pending" : "synced")
+      : "offline";
+
   // Load configuration & data
   useEffect(() => {
     if (isDemoMode) {
@@ -67,19 +89,20 @@ export function FinanceProvider({ children }) {
       orderBy("date", "desc")
     );
 
-    const unsubscribeTx = onSnapshot(txQuery, (snapshot) => {
+    const unsubscribeTx = onSnapshot(txQuery, { includeMetadataChanges: true }, (snapshot) => {
       const txList = [];
       snapshot.forEach((doc) => {
         txList.push({ id: doc.id, ...doc.data() });
       });
       setTransactions(txList);
+      setPendingTx(snapshot.metadata.hasPendingWrites);
     }, (err) => {
       console.error("Firestore transactions error: ", err);
     });
 
     // 2. Unified User Document Listener (Budgets & Initial Balances)
     const userDocRef = doc(db, "users", user.uid);
-    const unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
+    const unsubscribeUserDoc = onSnapshot(userDocRef, { includeMetadataChanges: true }, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (data.budgets) setBudgets(data.budgets);
@@ -95,6 +118,7 @@ export function FinanceProvider({ children }) {
         setBudgets(defaultBudgets);
         setInitialBalances(defaultBalances);
       }
+      setPendingUser(docSnap.metadata.hasPendingWrites);
       setLoading(false);
     }, (err) => {
       console.error("Firestore user doc error: ", err);
@@ -320,6 +344,7 @@ export function FinanceProvider({ children }) {
     currentBalances,
     totals,
     loading,
+    syncStatus,
     addTransaction,
     editTransaction,
     deleteTransaction,

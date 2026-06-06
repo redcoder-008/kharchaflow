@@ -1,11 +1,15 @@
 import { 
   CloudLightning, 
-  TrendingUp
+  TrendingUp, 
+  RefreshCw, 
+  WifiOff 
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useFinance } from "../../context/FinanceContext";
 
 export default function Header({ activePage, setActivePage }) {
   const { user, isDemoMode } = useAuth();
+  const { syncStatus } = useFinance();
 
   const getPageTitle = () => {
     switch (activePage) {
@@ -61,12 +65,30 @@ export default function Header({ activePage, setActivePage }) {
 
         {/* Right Section: User Profile & Quick Actions */}
         {user && (
-          <div className="flex items-center gap-4">
-            {/* Desktop status marker */}
-            <div className="hidden md:flex items-center gap-2 px-3.5 py-1.5 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-zinc-400 font-medium">
-              <span className={`w-2 h-2 rounded-full ${isDemoMode ? "bg-zinc-500 animate-pulse" : "bg-emerald-500"}`}></span>
-              {isDemoMode ? "Local Storage" : "Cloud Active"}
-            </div>
+          <div className="flex items-center gap-3">
+            {/* Sync Status Indicator */}
+            {!isDemoMode && syncStatus && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-zinc-800 bg-zinc-900/50">
+                {syncStatus === "synced" && (
+                  <>
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest hidden md:inline-block">Synced</span>
+                  </>
+                )}
+                {syncStatus === "pending" && (
+                  <>
+                    <RefreshCw className="w-3 h-3 text-amber-500 animate-spin" />
+                    <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest hidden md:inline-block">Syncing</span>
+                  </>
+                )}
+                {syncStatus === "offline" && (
+                  <>
+                    <WifiOff className="w-3 h-3 text-rose-500" />
+                    <span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest hidden md:inline-block">Offline</span>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* User Profile Avatar */}
             <button

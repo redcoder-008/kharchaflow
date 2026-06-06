@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 import { localDB } from "./storage";
 import { TestTube } from "lucide-react";
 
@@ -8,6 +9,7 @@ let app = null;
 let auth = null;
 let db = null;
 let googleProvider = null;
+let storage = null;
 
 const savedConfig = localDB.getFirebaseConfig();
 
@@ -33,13 +35,20 @@ if (hasValidConfig) {
     }
     auth = getAuth(app);
     db = getFirestore(app);
+    
+    // Enable offline persistence
+    enableIndexedDbPersistence(db).catch((err) => {
+      console.warn("Failed to enable offline persistence: ", err.code);
+    });
+
+    storage = getStorage(app);
     googleProvider = new GoogleAuthProvider();
   } catch (error) {
     console.error("Firebase initialization failed: ", error);
   }
 }
 
-export { app, auth, db, googleProvider, hasValidConfig };
+export { app, auth, db, googleProvider, storage, hasValidConfig };
 export function reloadFirebaseApp(newConfig) {
   if (newConfig) {
     localDB.saveFirebaseConfig(newConfig);

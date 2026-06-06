@@ -13,6 +13,7 @@ import Admin from "./pages/Admin";
 import AddTransactionModal from "./components/transactions/AddTransactionModal";
 import { TrendingUp } from "lucide-react";
 
+
 function AppContent() {
   const { user, loading } = useAuth();
   const { loading: financeLoading } = useFinance();

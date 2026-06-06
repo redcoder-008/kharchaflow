@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useFinance } from "../context/FinanceContext";
-import { reloadFirebaseApp } from "../db/firebase";
+import { reloadFirebaseApp, storage } from "../db/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { localDB } from "../db/storage";
 import { 
   User, 
@@ -27,6 +28,8 @@ export default function Settings() {
   const [phone, setPhone] = useState("");
   const [language, setLanguage] = useState("");
   const [photoURL, setPhotoURL] = useState("");
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState("");
   const [profileSuccess, setProfileSuccess] = useState(false);
   const [profileError, setProfileError] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
@@ -57,8 +60,22 @@ export default function Settings() {
       setPhone(user.phone || "");
       setLanguage(user.language || "en");
       setPhotoURL(user.photoURL || "");
+      setPhotoPreview(user.photoURL || "");
     }
   }, [user]);
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("File size exceeds 2MB limit.");
+        return;
+      }
+      const objectUrl = URL.createObjectURL(file);
+      setPhotoPreview(objectUrl);
+      setPhotoFile(file);
+    }
+  };
 
   useEffect(() => {
     if (budgets) {
@@ -105,17 +122,35 @@ export default function Settings() {
 
     setProfileSaving(true);
     try {
+      let finalPhotoURL = photoURL;
+
+      if (photoFile) {
+        if (isDemoMode) {
+          const reader = new FileReader();
+          finalPhotoURL = await new Promise((resolve) => {
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(photoFile);
+          });
+        } else {
+          if (!storage) throw new Error("Firebase Storage is not configured.");
+          const fileRef = ref(storage, `users/${user.uid}/profile_${Date.now()}_${photoFile.name}`);
+          await uploadBytes(fileRef, photoFile);
+          finalPhotoURL = await getDownloadURL(fileRef);
+        }
+      }
+
       await updateUserProfile({
         displayName: displayName.trim(),
         phone: phone.trim(),
         language,
-        photoURL: photoURL.trim()
+        photoURL: finalPhotoURL
       });
+      setPhotoFile(null);
       setProfileSuccess(true);
       setTimeout(() => setProfileSuccess(false), 3000);
     } catch (err) {
       console.error(err);
-      setProfileError("Failed to update profile name.");
+      setProfileError("Failed to update profile.");
     } finally {
       setProfileSaving(false);
     }
@@ -304,16 +339,33 @@ export default function Settings() {
                 </div>
               </div>
               <div>
-                <label htmlFor="photoURL-settings" className="finance-label">Profile Picture URL</label>
-                <input
-                  id="photoURL-settings"
-                  type="url"
-                  placeholder="https://example.com/avatar.jpg"
-                  value={photoURL}
-                  onChange={(e) => setPhotoURL(e.target.value)}
-                  disabled={profileSaving}
-                  className="finance-input"
-                />
+                <label className="finance-label">Profile Picture</label>
+                <div className="flex items-center gap-4 mt-2">
+                  <div className="w-16 h-16 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center relative group">
+                    {photoPreview ? (
+                      <img src={photoPreview} alt="Profile preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-8 h-8 text-zinc-500" />
+                    )}
+                    <label htmlFor="photo-upload" className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center cursor-pointer transition-all">
+                      <span className="text-[10px] font-bold text-white">CHANGE</span>
+                    </label>
+                  </div>
+                  <div className="flex-1">
+                    <label htmlFor="photo-upload" className="cursor-pointer px-3 py-1.5 bg-zinc-900 border border-zinc-700 hover:border-zinc-500 rounded-lg text-xs font-semibold text-zinc-300 transition-colors inline-block mb-1">
+                      Choose Image
+                    </label>
+                    <input
+                      id="photo-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoChange}
+                      disabled={profileSaving}
+                      className="hidden"
+                    />
+                    <p className="text-[10px] text-zinc-500">Max size 2MB. JPG, PNG, GIF allowed.</p>
+                  </div>
+                </div>
               </div>
 
               <div className="flex gap-3 pt-2">
