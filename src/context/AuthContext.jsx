@@ -118,7 +118,7 @@ export function AuthProvider({ children }) {
     try {
       if (isDemoMode) {
         // Simulate local latency
-        await new Promise((res) => setTimeout(res, 800));
+
         
         // Simple demo authentication checks
         const savedProfile = localDB.getProfile();
@@ -151,7 +151,7 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       if (isDemoMode) {
-        await new Promise((res) => setTimeout(res, 1000));
+
         
         const newProfile = { displayName, email, photoURL: null };
         localDB.saveProfile(newProfile);
@@ -202,7 +202,7 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       if (isDemoMode) {
-        await new Promise((res) => setTimeout(res, 500));
+
         localStorage.removeItem("kharchaflow_demo_active_user");
         setUser(null);
         setLoading(false);
@@ -225,7 +225,7 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       if (isDemoMode) {
-        await new Promise((res) => setTimeout(res, 1000));
+
         const demoUser = {
           uid: "demo-google-user-789",
           email: "google.yourname@kharchaflow.com",
@@ -272,7 +272,7 @@ export function AuthProvider({ children }) {
     setError(null);
     try {
       if (isDemoMode) {
-        await new Promise((res) => setTimeout(res, 600));
+
         // Mock password reset email success
         return true;
       } else {
