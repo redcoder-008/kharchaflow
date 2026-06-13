@@ -9,7 +9,7 @@ import {
   TrendingDown
 } from "lucide-react";
 
-export default function AddTransactionModal({ isOpen, onClose, editingTransaction, setActivePage }) {
+export default function AddTransactionModal({ isOpen, onClose, editingTransaction, setActivePage, defaultType }) {
   const { addTransaction, editTransaction } = useFinance();
   
   // Form state fields
@@ -36,8 +36,8 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
       setProvider(editingTransaction.provider || "");
       setNotes(editingTransaction.notes || "");
     } else {
-      // Reset form fields
-      setType("expense");
+      // Reset form fields, honour defaultType if provided
+      setType(defaultType || "expense");
       setAmount("");
       setCategory("Food");
       setDate(new Date().toISOString().split("T")[0]);
@@ -46,7 +46,7 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
       setNotes("");
     }
     setError("");
-  }, [editingTransaction, isOpen]);
+  }, [editingTransaction, isOpen, defaultType]);
 
   // Adjust provider and category defaults when payment method or type changes
   useEffect(() => {

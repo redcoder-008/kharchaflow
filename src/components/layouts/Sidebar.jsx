@@ -10,6 +10,7 @@ import {
   UserCheck
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import UserAvatar from "../ui/UserAvatar";
 
 export default function Sidebar({ activePage, setActivePage }) {
   const { user, logout, isDemoMode } = useAuth();
@@ -64,9 +65,7 @@ export default function Sidebar({ activePage, setActivePage }) {
         {user && (
           <div className="bg-zinc-950/40 border border-zinc-800/50 rounded-2xl p-4.5 mb-3 flex flex-col gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center font-bold text-emerald-400 text-sm tracking-wide">
-                {user.displayName ? user.displayName.split(" ").map(n => n[0]).join("").toUpperCase() : "CF"}
-              </div>
+              <UserAvatar user={user} size="w-10 h-10" textSize="text-sm" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-zinc-200 truncate leading-none mb-1">
                   {user.displayName || "Fintech User"}

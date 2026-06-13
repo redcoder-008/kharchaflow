@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
@@ -8,7 +8,9 @@ import {
   updateProfile as firebaseUpdateProfile,
   updatePassword,
   deleteUser,
-  onAuthStateChanged 
+  onAuthStateChanged,
+  signInWithPhoneNumber,
+  RecaptchaVerifier
 } from "firebase/auth";
 import { doc, setDoc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { auth, db, googleProvider, hasValidConfig } from "../db/firebase";
@@ -379,6 +381,91 @@ export function AuthProvider({ children }) {
     window.location.reload();
   };
 
+  // ── Phone Auth ─────────────────────────────────────────────────────────────
+  const recaptchaVerifierRef = useRef(null);
+
+  const setupRecaptcha = (containerId) => {
+    if (!hasValidConfig || isDemoMode) return null;
+    try {
+      if (recaptchaVerifierRef.current) {
+        recaptchaVerifierRef.current.clear();
+        recaptchaVerifierRef.current = null;
+      }
+      recaptchaVerifierRef.current = new RecaptchaVerifier(auth, containerId, {
+        size: "invisible",
+        callback: () => {},
+        "expired-callback": () => {
+          recaptchaVerifierRef.current = null;
+        }
+      });
+      return recaptchaVerifierRef.current;
+    } catch (err) {
+      console.error("Recaptcha setup failed:", err);
+      return null;
+    }
+  };
+
+  const sendPhoneOTP = async (phoneNumber, containerId) => {
+    setError(null);
+    try {
+      if (isDemoMode) {
+        // Demo: simulate OTP sent
+        return { verificationId: "demo-verification-id" };
+      }
+      const verifier = setupRecaptcha(containerId);
+      if (!verifier) throw new Error("reCAPTCHA setup failed.");
+      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, verifier);
+      return confirmationResult;
+    } catch (err) {
+      setError(err.message || "Failed to send OTP.");
+      throw err;
+    }
+  };
+
+  const confirmPhoneOTP = async (confirmationResult, otp, displayName) => {
+    setError(null);
+    setLoading(true);
+    try {
+      if (isDemoMode || (confirmationResult && confirmationResult.verificationId === "demo-verification-id")) {
+        if (otp !== "123456") throw new Error("Demo OTP is 123456.");
+        const phoneUser = {
+          uid: "demo-phone-user-" + Math.random().toString(36).substring(2, 7),
+          email: "",
+          displayName: displayName || "Phone User",
+          photoURL: null,
+          isAdmin: false
+        };
+        localStorage.setItem("kharchaflow_demo_active_user", JSON.stringify(phoneUser));
+        setUser(phoneUser);
+        setLoading(false);
+        return true;
+      }
+      const result = await confirmationResult.confirm(otp);
+      const firebaseUser = result.user;
+      if (displayName) {
+        await firebaseUpdateProfile(firebaseUser, { displayName });
+      }
+      const userDocRef = doc(db, "users", firebaseUser.uid);
+      const userDoc = await getDoc(userDocRef);
+      if (!userDoc.exists()) {
+        await setDoc(userDocRef, {
+          email: firebaseUser.email?.toLowerCase() || "",
+          displayName: displayName || firebaseUser.displayName || "Phone User",
+          phone: firebaseUser.phoneNumber || "",
+          budgets: localDB.getDefaultBudgets(),
+          initialBalances: localDB.getDefaultInitialBalances(),
+          isAdmin: false
+        });
+      }
+      setLoading(false);
+      return result.user;
+    } catch (err) {
+      setError(err.message || "Invalid OTP. Please try again.");
+      setLoading(false);
+      throw err;
+    }
+  };
+
   const value = {
     user,
     loading,
@@ -392,7 +479,9 @@ export function AuthProvider({ children }) {
     updateUserProfile,
     updateUserPassword,
     deleteUserAccount,
-    toggleDemoMode
+    toggleDemoMode,
+    sendPhoneOTP,
+    confirmPhoneOTP
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

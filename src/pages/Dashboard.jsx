@@ -6,7 +6,8 @@ import {
   TrendingUp, 
   TrendingDown, 
   Wallet, 
-  Plus, 
+
+
   Trash2,
   ChevronDown,
   ChevronUp,
@@ -31,7 +32,14 @@ import AddTransactionModal from "../components/transactions/AddTransactionModal"
 export default function Dashboard() {
   const { transactions, totals, currentBalances, deleteTransaction } = useFinance();
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [defaultType, setDefaultType] = useState("expense");
   const [expandedSource, setExpandedSource] = useState(null); // 'bank', 'wallet', 'mobile' or null
+
+  // Helper to open modal pre-set to a specific type
+  const openAdd = (type) => {
+    setDefaultType(type);
+    setIsAddOpen(true);
+  };
 
   // Calculate current month statistics (income, expense, savings)
   const stats = useMemo(() => {
@@ -204,13 +212,32 @@ export default function Dashboard() {
         <div className="finance-card lg:col-span-1 space-y-4">
           <div className="flex items-center justify-between border-b border-zinc-800/60 pb-3">
             <h4 className="text-sm font-bold text-white tracking-tight uppercase">Payment Sources</h4>
-            <button 
-              onClick={() => setIsAddOpen(true)}
-              className="p-1.5 rounded-lg bg-zinc-950 border border-zinc-850 hover:border-zinc-800 text-emerald-400 transition-all active:scale-95 flex items-center gap-1 text-xs font-bold"
+          {/* Add Income + Add Expense CTA buttons */}
+          <div className="flex gap-1.5">
+            {/* Add Income — solid emerald CTA */}
+            <button
+              onClick={() => openAdd("income")}
+              className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-bold
+                         bg-emerald-500 hover:bg-emerald-400 text-zinc-950
+                         shadow-sm hover:shadow-emerald-500/30 hover:shadow-md
+                         active:scale-95 transition-all duration-150"
             >
-              <Plus className="w-3.5 h-3.5" />
-              Add Flow
+              <TrendingUp className="w-3 h-3" />
+              Add Income
             </button>
+
+            {/* Add Expense — solid rose CTA */}
+            <button
+              onClick={() => openAdd("expense")}
+              className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-bold
+                         bg-rose-500 hover:bg-rose-400 text-white
+                         shadow-sm hover:shadow-rose-500/30 hover:shadow-md
+                         active:scale-95 transition-all duration-150"
+            >
+              <TrendingDown className="w-3 h-3" />
+              Add Expense
+            </button>
+          </div>
           </div>
 
           <div className="space-y-2.5">
@@ -519,7 +546,12 @@ export default function Dashboard() {
       </div>
 
       {/* Slide drawer for add flow */}
-      <AddTransactionModal isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} />
+      <AddTransactionModal
+        isOpen={isAddOpen}
+        onClose={() => setIsAddOpen(false)}
+        defaultType={defaultType}
+        setActivePage={() => {}}
+      />
     </div>
   );
 }

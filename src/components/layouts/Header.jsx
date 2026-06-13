@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useFinance } from "../../context/FinanceContext";
+import UserAvatar from "../ui/UserAvatar";
 
 export default function Header({ activePage, setActivePage }) {
   const { user, isDemoMode } = useAuth();
@@ -95,9 +96,7 @@ export default function Header({ activePage, setActivePage }) {
               onClick={() => setActivePage("settings")}
               className="flex items-center gap-2.5 p-1 bg-zinc-900 border border-zinc-850 hover:border-zinc-800 rounded-full md:rounded-xl md:px-3 md:py-1.5 transition-all outline-none"
             >
-              <div className="w-7 h-7 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center font-bold text-emerald-400 text-xs">
-                {user.displayName ? user.displayName.split(" ").map(n => n[0]).join("").toUpperCase() : "CF"}
-              </div>
+              <UserAvatar user={user} size="w-7 h-7" textSize="text-xs" />
               <span className="hidden md:block text-xs font-semibold text-zinc-300 max-w-28 truncate">
                 {user.displayName ? user.displayName.split(" ")[0] : "User"}
               </span>
