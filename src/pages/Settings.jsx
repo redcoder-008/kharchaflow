@@ -21,7 +21,7 @@ import {
 
 export default function Settings() {
   const { user, isDemoMode, logout, updateUserProfile, updateUserPassword, deleteUserAccount } = useAuth();
-  const { budgets, updateBudget } = useFinance();
+  const { budgets, updateBudgets } = useFinance();
 
   // Profile fields
   const [displayName, setDisplayName] = useState("");
@@ -41,7 +41,7 @@ export default function Settings() {
 
   // Theme state fields
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    return document.documentElement.classList.contains("dark") || !localStorage.getItem("kharchaflow_theme");
+    return localStorage.getItem("kharchaflow_theme") === "dark";
   });
 
   // Firebase Config State
@@ -126,10 +126,26 @@ export default function Settings() {
 
       if (photoFile) {
         if (isDemoMode) {
-          const reader = new FileReader();
           finalPhotoURL = await new Promise((resolve) => {
-            reader.onloadend = () => resolve(reader.result);
-            reader.readAsDataURL(photoFile);
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement("canvas");
+              const ctx = canvas.getContext("2d");
+              const MAX_SIZE = 256;
+              let { width, height } = img;
+              if (width > height && width > MAX_SIZE) {
+                height *= MAX_SIZE / width;
+                width = MAX_SIZE;
+              } else if (height > MAX_SIZE) {
+                width *= MAX_SIZE / height;
+                height = MAX_SIZE;
+              }
+              canvas.width = width;
+              canvas.height = height;
+              ctx.drawImage(img, 0, 0, width, height);
+              resolve(canvas.toDataURL("image/jpeg", 0.7));
+            };
+            img.src = URL.createObjectURL(photoFile);
           });
         } else {
           if (!storage) throw new Error("Firebase Storage is not configured.");
@@ -206,11 +222,7 @@ export default function Settings() {
     setBudgetSaving(true);
     
     try {
-      // Save all budgets in loop
-      const promises = Object.entries(categoryBudgets).map(([cat, val]) => 
-        updateBudget(cat, Number(val) || 0)
-      );
-      await Promise.all(promises);
+      await updateBudgets(categoryBudgets);
       setBudgetSuccess(true);
       setTimeout(() => setBudgetSuccess(false), 3000);
     } catch (err) {
@@ -302,7 +314,7 @@ export default function Settings() {
                 <input
                   id="displayName-settings"
                   type="text"
-                  placeholder="Karan Admin"
+                  placeholder="Your Name"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   disabled={profileSaving}

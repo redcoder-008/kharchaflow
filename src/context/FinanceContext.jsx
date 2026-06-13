@@ -153,15 +153,14 @@ export function FinanceProvider({ children }) {
       // Optimistic update
       setTransactions(prev => [{ id: tempId, ...txToSave }, ...prev]);
       
-      try {
-        const docRef = await addDoc(collection(db, "users", user.uid, "transactions"), txToSave);
-        return docRef.id;
-      } catch (error) {
-        // Revert optimistic update on error
-        setTransactions(prev => prev.filter(tx => tx.id !== tempId));
-        console.error("Add transaction error:", error);
-        throw error;
-      }
+      // Fire and forget to support offline queuing without blocking UI
+      addDoc(collection(db, "users", user.uid, "transactions"), txToSave)
+        .catch(error => {
+          setTransactions(prev => prev.filter(tx => tx.id !== tempId));
+          console.error("Add transaction error:", error);
+        });
+      
+      return tempId;
     }
   };
 
@@ -180,14 +179,12 @@ export function FinanceProvider({ children }) {
       // Optimistic update
       setTransactions(prev => prev.map((tx) => (tx.id === id ? { ...tx, ...updated } : tx)));
       
-      try {
-        const txDocRef = doc(db, "users", user.uid, "transactions", id);
-        await updateDoc(txDocRef, updated);
-        return true;
-      } catch (error) {
+      const txDocRef = doc(db, "users", user.uid, "transactions", id);
+      updateDoc(txDocRef, updated).catch(error => {
         console.error("Edit transaction error:", error);
-        throw error;
-      }
+      });
+      
+      return true;
     }
   };
 
@@ -201,34 +198,35 @@ export function FinanceProvider({ children }) {
       // Optimistic update
       setTransactions(prev => prev.filter((tx) => tx.id !== id));
       
-      try {
-        const txDocRef = doc(db, "users", user.uid, "transactions", id);
-        await deleteDoc(txDocRef);
-        return true;
-      } catch (error) {
+      const txDocRef = doc(db, "users", user.uid, "transactions", id);
+      deleteDoc(txDocRef).catch(error => {
         console.error("Delete transaction error:", error);
-        throw error;
-      }
+      });
+      
+      return true;
     }
   };
 
-  const updateBudget = async (category, amount) => {
-    const updatedBudgets = { ...budgets, [category]: Number(amount) };
+  const updateBudgets = async (newBudgets) => {
+    const formattedBudgets = {};
+    for (const cat in newBudgets) {
+      formattedBudgets[cat] = Number(newBudgets[cat]) || 0;
+    }
     
     if (isDemoMode || !user) {
-      setBudgets(updatedBudgets);
-      localDB.saveBudgets(updatedBudgets);
+      setBudgets(formattedBudgets);
+      localDB.saveBudgets(formattedBudgets);
       return true;
     } else {
       // Optimistic update
-      setBudgets(updatedBudgets);
+      setBudgets(formattedBudgets);
       
       try {
         const userDocRef = doc(db, "users", user.uid);
-        await setDoc(userDocRef, { budgets: updatedBudgets }, { merge: true });
+        await setDoc(userDocRef, { budgets: formattedBudgets }, { merge: true });
         return true;
       } catch (error) {
-        console.error("Update budget error:", error);
+        console.error("Update budgets error:", error);
         throw error;
       }
     }
@@ -264,13 +262,25 @@ export function FinanceProvider({ children }) {
     }
   };
 
+  // Guaranteed global chronological sorting
+  const sortedTransactions = useMemo(() => {
+    return [...transactions].sort((a, b) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      if (dateA !== dateB) return dateB - dateA;
+      const createA = new Date(a.createdAt || 0).getTime();
+      const createB = new Date(b.createdAt || 0).getTime();
+      return createB - createA;
+    });
+  }, [transactions]);
+
   // Live Ledger Balance Calculation Layer
   const currentBalances = useMemo(() => {
     if (Object.keys(initialBalances).length === 0) return {};
     
     const computed = JSON.parse(JSON.stringify(initialBalances));
     
-    transactions.forEach((tx) => {
+    sortedTransactions.forEach((tx) => {
       const amount = Number(tx.amount);
       const method = tx.paymentMethod;
       const provider = tx.provider;
@@ -337,7 +347,7 @@ export function FinanceProvider({ children }) {
   }, [currentBalances]);
 
   const value = {
-    transactions,
+    transactions: sortedTransactions,
     budgets,
     initialBalances,
     currentBalances,
@@ -347,7 +357,7 @@ export function FinanceProvider({ children }) {
     addTransaction,
     editTransaction,
     deleteTransaction,
-    updateBudget,
+    updateBudgets,
     updateInitialBalance
   };
 

@@ -239,7 +239,7 @@ export default function Analytics() {
                   <div className="space-y-1">
                     <div className="w-full bg-zinc-900 rounded-full h-2 border border-zinc-850/60">
                       <div 
-                        className={`h-1.8 rounded-full transition-all duration-300 ${isOver ? "bg-rose-500" : "bg-emerald-500"}`}
+                        className={`h-full rounded-full transition-all duration-300 ${isOver ? "bg-rose-500" : "bg-emerald-500"}`}
                         style={{ width: `${b.percentage}%` }}
                       ></div>
                     </div>

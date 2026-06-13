@@ -189,7 +189,7 @@ export default function Auth() {
                 <input
                   id="displayName"
                   type="text"
-                  placeholder="Karan Admin"
+                  placeholder="Your Name"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   disabled={loading}
@@ -207,7 +207,7 @@ export default function Auth() {
               <input
                 id="email"
                 type="email"
-                placeholder="karan@example.com"
+                placeholder="yourname@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}

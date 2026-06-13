@@ -228,8 +228,8 @@ export function AuthProvider({ children }) {
         await new Promise((res) => setTimeout(res, 1000));
         const demoUser = {
           uid: "demo-google-user-789",
-          email: "google.karan@kharchaflow.com",
-          displayName: "Karan (Google)",
+          email: "google.yourname@kharchaflow.com",
+          displayName: "Your Name (Google)",
           photoURL: "https://lh3.googleusercontent.com/a/default-user=s96-c",
           isAdmin: true
         };
@@ -312,6 +312,7 @@ export function AuthProvider({ children }) {
           if (data.phone !== undefined) docUpdates.phone = data.phone;
           if (data.language !== undefined) docUpdates.language = data.language;
           if (data.displayName !== undefined) docUpdates.displayName = data.displayName;
+          if (data.photoURL !== undefined) docUpdates.photoURL = data.photoURL;
           
           if (Object.keys(docUpdates).length > 0) {
             const userDocRef = doc(db, "users", auth.currentUser.uid);

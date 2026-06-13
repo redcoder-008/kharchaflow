@@ -15,12 +15,12 @@ const savedConfig = localDB.getFirebaseConfig();
 
 // Default keys from environment variables or custom config saved in LocalStorage
 const firebaseConfig = savedConfig || {
-  apiKey:  "AIzaSyAKrp8hmewhlIY0lOa_hDE6h7BRJrSaadc",
-  authDomain: "kharchaflow-878a7.firebaseapp.com",
-  projectId: "kharchaflow-878a7",
-  storageBucket: "kharchaflow-878a7.firebasestorage.app",
-  messagingSenderId: "676021776006",
-  appId:"1:676021776006:web:a903d852f85e93deaa2b07"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 

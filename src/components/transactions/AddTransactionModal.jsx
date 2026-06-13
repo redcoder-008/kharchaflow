@@ -9,7 +9,7 @@ import {
   TrendingDown
 } from "lucide-react";
 
-export default function AddTransactionModal({ isOpen, onClose, editingTransaction }) {
+export default function AddTransactionModal({ isOpen, onClose, editingTransaction, setActivePage }) {
   const { addTransaction, editTransaction } = useFinance();
   
   // Form state fields
@@ -122,6 +122,7 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
         await editTransaction(editingTransaction.id, txObject);
       } else {
         await addTransaction(txObject);
+        if (setActivePage) setActivePage("dashboard");
       }
       onClose();
     } catch (err) {
