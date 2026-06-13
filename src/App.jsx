@@ -138,7 +138,12 @@ function AppContent() {
       {showApkBanner && (
         <div className="md:hidden fixed bottom-24 right-4 z-50 flex items-center bg-zinc-900 border border-emerald-500/30 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.2)] p-1 animate-slide-up backdrop-blur-md">
           <button 
-            onClick={() => alert("APK Download starting...")}
+            onClick={() => {
+              const a = document.createElement("a");
+              a.href = "/app-debug.apk";
+              a.download = "KharchaFlow.apk";
+              a.click();
+            }}
             className="flex items-center gap-2 px-3 py-1.5 hover:bg-emerald-500/10 rounded-full transition-colors outline-none group"
           >
             <div className="w-6 h-6 bg-gradient-to-tr from-emerald-600 to-emerald-400 rounded-full flex items-center justify-center text-white shadow-inner group-hover:scale-105 transition-transform">
