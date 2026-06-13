@@ -8,7 +8,7 @@ export const formatCurrency = (value) => {
     maximumFractionDigits: 2
   });
 
-  return `${number < 0 ? "-" : ""}Rs. ${formatted}`;
+  return `Rs. ${number < 0 ? "-" : ""}${formatted}`;
 };
 
 export const formatDate = (dateString) => {

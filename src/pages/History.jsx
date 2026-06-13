@@ -25,6 +25,8 @@ export default function History() {
   const [editingTx, setEditingTx] = useState(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [showFiltersMobile, setShowFiltersMobile] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
 
   // Extract all unique months that have transactions for the filter dropdown
   const uniqueMonths = useMemo(() => {
@@ -58,14 +60,8 @@ export default function History() {
     setIsEditOpen(true);
   };
 
-  const handleDeleteTrigger = async (id) => {
-    if (confirm("Are you sure you want to permanently delete this transaction?")) {
-      try {
-        await deleteTransaction(id);
-      } catch (err) {
-        console.error("Delete failed: ", err);
-      }
-    }
+  const handleDeleteTrigger = (id) => {
+    setDeleteTargetId(id);
   };
 
   const resetFilters = () => {
@@ -357,6 +353,65 @@ export default function History() {
         }} 
         editingTransaction={editingTx}
       />
+
+      {/* Custom Delete Confirmation Modal */}
+      {deleteTargetId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="absolute inset-0" onClick={() => setDeleteTargetId(null)}></div>
+          <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl relative z-10 animate-slide-up">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-500 shrink-0">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-bold text-white mb-2">Confirm Transaction Deletion</h3>
+                <p className="text-xs text-zinc-450 leading-relaxed mb-6">
+                  Are you sure you want to permanently delete this transaction? This action is irreversible and the transaction record will be permanently removed from your history ledger.
+                </p>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => setDeleteTargetId(null)}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold bg-zinc-950 border border-zinc-800 hover:border-zinc-700 text-zinc-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const id = deleteTargetId;
+                      setDeleteTargetId(null);
+                      try {
+                        await deleteTransaction(id);
+                        setShowSuccessToast(true);
+                        setTimeout(() => setShowSuccessToast(false), 3000);
+                      } catch (err) {
+                        console.error("Delete failed: ", err);
+                      }
+                    }}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-500 hover:bg-rose-600 text-white transition-colors shadow-md hover:shadow-rose-500/20"
+                  >
+                    Delete Record
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Notification Alert */}
+      {showSuccessToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-zinc-900 border border-emerald-500/20 rounded-2xl p-4 flex items-center gap-3.5 shadow-2xl max-w-sm animate-slide-up">
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 shrink-0">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div>
+            <h5 className="text-xs font-bold text-white">Transaction Record Deleted</h5>
+            <p className="text-[10px] text-zinc-400 font-medium mt-0.5">The selected transaction record has been successfully and permanently deleted.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

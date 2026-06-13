@@ -21,6 +21,17 @@ function AppContent() {
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [showApkBanner, setShowApkBanner] = useState(true);
 
+  // Programmatically hide the splash screen when app loading finishes
+  useEffect(() => {
+    if (!loading && !financeLoading) {
+      import("@capacitor/splash-screen")
+        .then(({ SplashScreen }) => {
+          SplashScreen.hide().catch(() => {});
+        })
+        .catch(() => {});
+    }
+  }, [loading, financeLoading]);
+
   // Route protection
   useEffect(() => {
     if (user && !user.isAdmin && activePage === "admin") {

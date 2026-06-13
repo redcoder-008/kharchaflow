@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useFinance } from "../../context/FinanceContext";
 import { CATEGORIES, PAYMENT_METHODS, EWALLET_PROVIDERS, BANK_PROVIDERS } from "../../utils/constants";
+import { formatCurrency } from "../../utils/helpers";
 import { 
   X, 
   Calendar,
@@ -10,7 +11,7 @@ import {
 } from "lucide-react";
 
 export default function AddTransactionModal({ isOpen, onClose, editingTransaction, setActivePage, defaultType }) {
-  const { addTransaction, editTransaction } = useFinance();
+  const { addTransaction, editTransaction, currentBalances } = useFinance();
   
   // Form state fields
   const [type, setType] = useState("expense"); // expense or income
@@ -72,6 +73,41 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
       setCategory("Food");
     }
   }, [type, editingTransaction]);
+
+  const getAvailableBalance = () => {
+    if (!currentBalances) return 0;
+    let bal = 0;
+    if (paymentMethod === "Cash") {
+      bal = currentBalances["Cash"] || 0;
+    } else if (paymentMethod === "Credit Card") {
+      bal = currentBalances["Credit Card"] || 0;
+    } else if (paymentMethod === "eWallet") {
+      bal = (currentBalances["eWallet"] && provider) ? (currentBalances["eWallet"][provider] || 0) : 0;
+    } else if (paymentMethod === "Bank Account") {
+      bal = (currentBalances["Bank Account"] && provider) ? (currentBalances["Bank Account"][provider] || 0) : 0;
+    } else if (paymentMethod === "Mobile Banking") {
+      bal = (currentBalances["Mobile Banking"] && provider) ? (currentBalances["Mobile Banking"][provider] || 0) : 0;
+    }
+
+    if (editingTransaction && editingTransaction.paymentMethod === paymentMethod) {
+      const isProviderMatch = ["Cash", "Credit Card"].includes(paymentMethod) || editingTransaction.provider === provider;
+      if (isProviderMatch) {
+        const editAmount = Number(editingTransaction.amount);
+        if (editingTransaction.type === "income") {
+          bal -= editAmount;
+        } else {
+          bal += editAmount;
+        }
+      }
+    }
+    return bal;
+  };
+
+  const availableBalance = getAvailableBalance();
+  const numericAmount = Number(amount || 0);
+  const resultingBalance = type === "expense" 
+    ? availableBalance - numericAmount 
+    : availableBalance + numericAmount;
 
   if (!isOpen) return null;
 
@@ -209,6 +245,24 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
                 className="w-full pl-12 pr-4 py-4 bg-zinc-950 border border-zinc-800 rounded-2xl text-xl font-bold text-white placeholder-zinc-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
                 autoFocus
               />
+            </div>
+            
+            {/* Dynamic Balance Indicator */}
+            <div className="mt-2.5 bg-zinc-950/50 border border-zinc-850/50 rounded-xl p-3 space-y-1.5">
+              <div className="text-xs flex justify-between items-center">
+                <span className="text-zinc-550 font-medium">Available Balance:</span>
+                <span className={`font-bold ${availableBalance < 0 ? "text-rose-500" : "text-zinc-350"}`}>
+                  {formatCurrency(availableBalance)}
+                </span>
+              </div>
+              {numericAmount > 0 && (
+                <div className="text-xs flex justify-between items-center border-t border-zinc-850/40 pt-1.5">
+                  <span className="text-zinc-550 font-medium">Resulting Balance:</span>
+                  <span className={`font-extrabold ${resultingBalance < 0 ? "text-rose-500" : "text-emerald-400"}`}>
+                    {formatCurrency(resultingBalance)}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 

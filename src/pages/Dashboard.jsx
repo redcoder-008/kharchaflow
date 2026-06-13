@@ -144,7 +144,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div>
-            <h3 className="text-2xl font-bold tracking-tight text-white mt-4">
+            <h3 className={`text-2xl font-bold tracking-tight mt-4 ${totals.net < 0 ? "text-rose-500 font-extrabold animate-pulse" : "text-white"}`}>
               {formatCurrency(totals.net)}
             </h3>
             <p className="text-[10px] text-zinc-500 font-semibold uppercase mt-1">Overall Net Assets</p>
@@ -239,7 +239,7 @@ export default function Dashboard() {
             </button>
           </div>
           </div>
-
+          
           <div className="space-y-2.5">
             {/* Cash Balance */}
             <div className="bg-zinc-950/40 border border-zinc-850/60 rounded-xl p-3.5 flex items-center justify-between">
@@ -252,7 +252,7 @@ export default function Dashboard() {
                   <p className="text-[10px] text-zinc-500">Physical Currency</p>
                 </div>
               </div>
-              <span className="text-sm font-bold text-zinc-200">{formatCurrency(totals.cash)}</span>
+              <span className={`text-sm font-bold ${totals.cash < 0 ? "text-rose-500" : "text-zinc-200"}`}>{formatCurrency(totals.cash)}</span>
             </div>
 
             {/* Credit Card Balance */}
@@ -266,7 +266,7 @@ export default function Dashboard() {
                   <p className="text-[10px] text-zinc-500">Outstanding Limit</p>
                 </div>
               </div>
-              <span className="text-sm font-bold text-rose-400">{formatCurrency(totals.creditCard)}</span>
+              <span className={`text-sm font-bold ${totals.creditCard < 0 ? "text-rose-500" : "text-zinc-200"}`}>{formatCurrency(totals.creditCard)}</span>
             </div>
 
             {/* Bank Accounts */}
@@ -285,7 +285,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-zinc-200">{formatCurrency(totals.bank)}</span>
+                  <span className={`text-sm font-bold ${totals.bank < 0 ? "text-rose-500" : "text-zinc-200"}`}>{formatCurrency(totals.bank)}</span>
                   {expandedSource === "bank" ? <ChevronUp className="w-4 h-4 text-zinc-500" /> : <ChevronDown className="w-4 h-4 text-zinc-500" />}
                 </div>
               </button>
@@ -294,7 +294,7 @@ export default function Dashboard() {
                   {Object.entries(currentBalances["Bank Account"]).map(([bank, bal]) => (
                     <div key={bank} className="flex justify-between items-center text-xs py-1">
                       <span className="text-zinc-400 font-medium">{bank}</span>
-                      <span className="text-zinc-200 font-bold">{formatCurrency(bal)}</span>
+                      <span className={`font-bold ${bal < 0 ? "text-rose-500" : "text-zinc-200"}`}>{formatCurrency(bal)}</span>
                     </div>
                   ))}
                 </div>
@@ -317,7 +317,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-zinc-200">{formatCurrency(totals.wallet)}</span>
+                  <span className={`text-sm font-bold ${totals.wallet < 0 ? "text-rose-500" : "text-zinc-200"}`}>{formatCurrency(totals.wallet)}</span>
                   {expandedSource === "wallet" ? <ChevronUp className="w-4 h-4 text-zinc-500" /> : <ChevronDown className="w-4 h-4 text-zinc-500" />}
                 </div>
               </button>
@@ -326,7 +326,7 @@ export default function Dashboard() {
                   {Object.entries(currentBalances["eWallet"]).map(([wallet, bal]) => (
                     <div key={wallet} className="flex justify-between items-center text-xs py-1">
                       <span className="text-zinc-400 font-medium">{wallet}</span>
-                      <span className="text-zinc-200 font-bold">{formatCurrency(bal)}</span>
+                      <span className={`font-bold ${bal < 0 ? "text-rose-500" : "text-zinc-200"}`}>{formatCurrency(bal)}</span>
                     </div>
                   ))}
                 </div>
@@ -349,7 +349,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-zinc-200">{formatCurrency(totals.mobileBanking)}</span>
+                  <span className={`text-sm font-bold ${totals.mobileBanking < 0 ? "text-rose-500" : "text-zinc-200"}`}>{formatCurrency(totals.mobileBanking)}</span>
                   {expandedSource === "mobile" ? <ChevronUp className="w-4 h-4 text-zinc-500" /> : <ChevronDown className="w-4 h-4 text-zinc-500" />}
                 </div>
               </button>
@@ -358,7 +358,7 @@ export default function Dashboard() {
                   {Object.entries(currentBalances["Mobile Banking"]).map(([bank, bal]) => (
                     <div key={bank} className="flex justify-between items-center text-xs py-1">
                       <span className="text-zinc-400 font-medium">{bank} App</span>
-                      <span className="text-zinc-200 font-bold">{formatCurrency(bal)}</span>
+                      <span className={`font-bold ${bal < 0 ? "text-rose-500" : "text-zinc-200"}`}>{formatCurrency(bal)}</span>
                     </div>
                   ))}
                 </div>
