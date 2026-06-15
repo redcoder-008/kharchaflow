@@ -502,7 +502,22 @@ export default function Admin() {
                           <p className="text-sm font-semibold text-zinc-200">{u.displayName || "—"}</p>
                         </div>
                       </td>
-                      <td className="p-4 text-xs text-zinc-400">{u.email || "—"}</td>
+                      <td className="p-4">
+                        {u.email ? (
+                          <a
+                            href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(u.email)}&su=${encodeURIComponent("Welcome to KharchaFlow! 🎉")}&body=${encodeURIComponent(`Hi ${u.displayName || "there"},\n\nWelcome to KharchaFlow! 🎉\n\nWe're thrilled to have you on board. KharchaFlow is your smart personal finance companion — track your income, manage expenses, and gain insights that help you take control of your money.\n\nHere's what you can do:\n• 📊 Track income & expenses in real time\n• 📈 Visualize your spending with beautiful charts\n• 💡 Get smart financial insights\n• 🔒 Enjoy secure, private data management\n\nIf you ever need help, just reply to this email — we're always happy to assist!\n\nHappy budgeting! 💸\n\nWarm regards,\nThe KharchaFlow Team`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={`Send welcome email to ${u.email}`}
+                            className="group flex items-center gap-1.5 text-xs text-zinc-400 hover:text-indigo-400 transition-colors duration-150"
+                          >
+                            <Mail className="w-3 h-3 text-zinc-600 group-hover:text-indigo-400 transition-colors shrink-0" />
+                            <span className="underline underline-offset-2 decoration-dotted decoration-zinc-600 group-hover:decoration-indigo-400">{u.email}</span>
+                          </a>
+                        ) : (
+                          <span className="text-xs text-zinc-600">—</span>
+                        )}
+                      </td>
                       <td className="p-4">
                         <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded border ${u.isAdmin ? "bg-rose-500/10 text-rose-400 border-rose-500/20" : "bg-zinc-800/60 text-zinc-400 border-zinc-700/50"}`}>
                           {u.isAdmin ? "Admin" : "User"}
