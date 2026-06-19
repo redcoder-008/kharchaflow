@@ -50,15 +50,21 @@
   html {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     scroll-behavior: smooth;
-    height: 100%;
-    height: -webkit-fill-available;
+    /* dvh collapses when the virtual keyboard opens — prevents white gap above keyboard */
+    height: 100dvh;
   }
   
   body {
     @apply bg-zinc-950 text-zinc-100 antialiased overflow-x-hidden transition-colors duration-200;
-    min-height: 100%;
-    min-height: -webkit-fill-available;
     min-height: 100dvh;
+    /* Prevent any stray white-space above the keyboard */
+    overflow: hidden;
+  }
+
+  /* Restore scroll on the root element so the app can scroll */
+  #root {
+    min-height: 100dvh;
+    overflow-x: hidden;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -148,7 +154,7 @@
 
 /* Proper safe-area padding for the bottom navigation bar */
 .pb-safe {
-  padding-bottom: max(var(--safe-bottom), 0px);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 0px);
 }
 
 /* Bottom nav height token so any content can use it */
@@ -158,13 +164,27 @@
 
 /* Spacer for scrollable page content on mobile so it clears the bottom nav */
 .mobile-page-bottom-pad {
-  padding-bottom: calc(var(--bottom-nav-h) + var(--safe-bottom) + 1.5rem);
+  padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 1.5rem);
 }
 
 /* ── Prevent layout reflow on keyboard open ─────────────────────────────── */
 /* Use the dvh unit so heights shrink when the virtual keyboard is shown */
 .h-dvh  { height: 100dvh; }
 .min-h-dvh { min-height: 100dvh; }
+
+/*
+ * Modal sheet on mobile: cap to dvh so it shrinks when the keyboard opens.
+ * The form inside scrolls; the save button sticks at the bottom with
+ * enough padding to clear the safe-area (home indicator bar).
+ */
+.modal-sheet-mobile {
+  max-height: 92dvh;
+}
+
+/* Extra breathing room at the bottom of modal forms on mobile devices */
+.modal-form-bottom-pad {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px);
+}
 
 /* Hide spin buttons in number inputs */
 input::-webkit-outer-spin-button,
