@@ -14,12 +14,23 @@ import AddTransactionModal from "./components/transactions/AddTransactionModal";
   import { TrendingUp, Download, X } from "lucide-react";
 
 
+// Returns true when the page is running inside the installed Android APK
+// (Capacitor sets window.Capacitor; Android WebView adds "wv" to the UA).
+function isRunningInApk() {
+  if (typeof window === "undefined") return false;
+  if (window.Capacitor?.isNativePlatform?.()) return true;
+  const ua = navigator.userAgent || "";
+  // "wv" appears in the UA string of Android WebView
+  return /Android/.test(ua) && /wv/.test(ua);
+}
+
 function AppContent() {
   const { user, loading } = useAuth();
   const { loading: financeLoading } = useFinance();
   const [activePage, setActivePage] = useState("dashboard");
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
-  const [showApkBanner, setShowApkBanner] = useState(true);
+  // Never show the APK download banner when already running inside the APK.
+  const [showApkBanner, setShowApkBanner] = useState(() => !isRunningInApk());
 
   // Programmatically hide the splash screen when app loading finishes
   useEffect(() => {
@@ -111,7 +122,7 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex md:pl-64 text-zinc-100 bg-mesh-grid relative">
+    <div className="min-h-dvh bg-zinc-950 flex md:pl-64 text-zinc-100 bg-mesh-grid relative">
       
       {/* Decorative Grid Backdrop */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808005_1px,transparent_1px),linear-gradient(to_bottom,#80808005_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none"></div>
@@ -125,8 +136,8 @@ function AppContent() {
         {/* Sticky top header bar */}
         <Header activePage={activePage} setActivePage={setActivePage} />
 
-        {/* Scrollable primary route wrapper */}
-        <main className="flex-grow p-4 md:p-8 max-w-7xl w-full mx-auto overflow-y-auto">
+        {/* Scrollable primary route wrapper — extra bottom padding on mobile so content clears the fixed bottom nav */}
+        <main className="flex-grow p-4 md:p-8 pb-4 max-w-7xl w-full mx-auto overflow-y-auto mobile-page-bottom-pad md:pb-8">
           {renderPage()}
         </main>
       </div>
@@ -145,8 +156,8 @@ function AppContent() {
         setActivePage={setActivePage}
       />
 
-      {/* Download APK Floating Banner (Mobile Only) */}
-      {showApkBanner && (
+      {/* Download APK Floating Banner — visible only in the mobile browser, never inside the APK */}
+      {showApkBanner && !isRunningInApk() && (
         <div className="md:hidden fixed bottom-24 right-4 z-50 flex items-center bg-zinc-900 border border-emerald-500/30 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.2)] p-1 animate-slide-up backdrop-blur-md">
           <button 
             onClick={() => {
