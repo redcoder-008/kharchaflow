@@ -170,13 +170,21 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center p-0 md:p-4 bg-zinc-950/80 backdrop-blur-sm">
-      
-      {/* Tap out zone to close modal */}
+    <div
+      className="fixed inset-x-0 top-0 z-50 flex items-end justify-center md:inset-0 md:items-center md:p-4 bg-zinc-950/80 backdrop-blur-sm"
+      style={{ height: '100dvh' }}
+    >
+      {/* Tap-out zone to close modal */}
       <div className="absolute inset-0" onClick={onClose}></div>
 
       {/* Main Drawer Shell */}
-      <div className="w-full md:max-w-xl bg-zinc-900 border border-zinc-800 md:rounded-3xl rounded-t-3xl shadow-2xl relative z-10 flex flex-col max-h-[92vh] md:max-h-[85vh] animate-slide-up md:animate-none overflow-hidden">
+      <div
+        className="w-full md:max-w-xl bg-zinc-900 border border-zinc-800 md:rounded-3xl rounded-t-3xl shadow-2xl relative z-10 flex flex-col animate-slide-up md:animate-none overflow-hidden"
+        style={{
+          /* Mobile: cap to 90dvh so it shrinks with keyboard and never covers bottom nav */
+          maxHeight: 'min(90dvh, calc(100dvh - env(safe-area-inset-bottom, 0px)))',
+        }}
+      >
         
         {/* Header bar */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-800/60">
@@ -396,21 +404,25 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
             </div>
           </div>
 
-          {/* 8. Save Trigger Button */}
-          <div className="pt-2">
-            <button
-              type="submit"
-              disabled={saving}
-              className="w-full bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2.5 transition-all shadow-md"
-            >
-              {saving ? (
-                <span className="w-5 h-5 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin"></span>
-              ) : (
-                <span>{editingTransaction ? "Save Changes" : "Record Transaction"}</span>
-              )}
-            </button>
-          </div>
+          {/* 8. Save Trigger Button — sticky at sheet bottom so it's always visible */}
         </form>
+        <div
+          className="px-6 pb-4 pt-3 border-t border-zinc-800/60 bg-zinc-900 shrink-0"
+          style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)' }}
+        >
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2.5 transition-all shadow-md active:scale-[0.98]"
+          >
+            {saving ? (
+              <span className="w-5 h-5 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin"></span>
+            ) : (
+              <span>{editingTransaction ? "Save Changes" : "Record Transaction"}</span>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

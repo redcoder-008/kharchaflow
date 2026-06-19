@@ -122,7 +122,7 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-dvh bg-zinc-950 flex md:pl-64 text-zinc-100 bg-mesh-grid relative">
+    <div className="h-full bg-zinc-950 flex md:pl-64 text-zinc-100 bg-mesh-grid relative overflow-hidden">
       
       {/* Decorative Grid Backdrop */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808005_1px,transparent_1px),linear-gradient(to_bottom,#80808005_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none"></div>
@@ -131,13 +131,13 @@ function AppContent() {
       <Sidebar activePage={activePage} setActivePage={setActivePage} />
 
       {/* Main content pane */}
-      <div className="flex-1 flex flex-col min-w-0 z-10">
+      <div className="flex-1 flex flex-col min-w-0 z-10 overflow-hidden">
         
         {/* Sticky top header bar */}
         <Header activePage={activePage} setActivePage={setActivePage} />
 
         {/* Scrollable primary route wrapper — extra bottom padding on mobile so content clears the fixed bottom nav */}
-        <main className="flex-grow p-4 md:p-8 pb-4 max-w-7xl w-full mx-auto overflow-y-auto mobile-page-bottom-pad md:pb-8">
+        <main className="flex-grow p-4 md:p-8 pb-4 max-w-7xl w-full mx-auto overflow-y-auto mobile-page-bottom-pad md:pb-8 -webkit-overflow-scrolling-touch">
           {renderPage()}
         </main>
       </div>
@@ -158,7 +158,10 @@ function AppContent() {
 
       {/* Download APK Floating Banner — visible only in the mobile browser, never inside the APK */}
       {showApkBanner && !isRunningInApk() && (
-        <div className="md:hidden fixed bottom-24 right-4 z-50 flex items-center bg-zinc-900 border border-emerald-500/30 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.2)] p-1 animate-slide-up backdrop-blur-md">
+        <div
+          className="md:hidden fixed right-4 z-50 flex items-center bg-zinc-900 border border-emerald-500/30 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.2)] p-1 animate-slide-up backdrop-blur-md"
+          style={{ bottom: 'calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
+        >
           <button 
             onClick={() => {
               const a = document.createElement("a");

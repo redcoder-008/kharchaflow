@@ -29,7 +29,7 @@ export default function BottomNav({ activePage, setActivePage, onQuickAddClick }
      * on notch/gesture-bar devices (Android & iOS).
      */
     <nav
-      className="fixed bottom-0 inset-x-0 bg-zinc-900/95 backdrop-blur-md border-t border-zinc-800/80 md:hidden z-30"
+      className="fixed bottom-0 inset-x-0 bg-zinc-900/95 backdrop-blur-md border-t border-zinc-800/80 md:hidden z-40"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div
@@ -39,14 +39,14 @@ export default function BottomNav({ activePage, setActivePage, onQuickAddClick }
         {menuItems.map((item) => {
           if (item.id === "placeholder") {
             return (
-              // FAB sits above the nav: lifted by (half FAB height + half nav height) = (28 + 32) = 60px
-              <div key="placeholder-fab" className="flex items-center justify-center" style={{ marginTop: '-60px' }}>
+              // FAB: lifted by (half FAB h=32 + half nav h=32) = 64px. Larger button (w-16/h-16)
+              <div key="placeholder-fab" className="flex items-center justify-center" style={{ marginTop: '-64px' }}>
                 <button
                   onClick={onQuickAddClick}
-                  className="w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 flex items-center justify-center shadow-[0_4px_24px_rgba(16,185,129,0.45)] active:scale-90 transition-all duration-150 border-4 border-zinc-900"
+                  className="w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 flex items-center justify-center shadow-[0_6px_28px_rgba(16,185,129,0.5)] active:scale-90 transition-all duration-150 border-4 border-zinc-900 relative z-50"
                   aria-label="Quick Add Transaction"
                 >
-                  <Plus className="w-7 h-7 stroke-[2.8]" />
+                  <Plus className="w-8 h-8 stroke-[2.8]" />
                 </button>
               </div>
             );
