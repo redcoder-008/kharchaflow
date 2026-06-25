@@ -126,5 +126,152 @@ export const localDB = {
     localStorage.removeItem("kharchaflow_budgets");
     localStorage.removeItem("kharchaflow_initial_balances");
     localStorage.removeItem("kharchaflow_profile");
+  },
+
+  seedDummyData: () => {
+    const dummyBudgets = {
+      Food: 15000,
+      Transport: 5000,
+      Shopping: 12000,
+      Bills: 8000,
+      Entertainment: 6000,
+      Education: 4000,
+      Health: 5000,
+      Others: 5000
+    };
+
+    const dummyInitialBalances = {
+      "Cash": 8500.00,
+      "Credit Card": -4200.00,
+      "Bank Account": {
+        "Global IME Bank": 12000.00,
+        "Nabil Bank": 45000.00,
+        "NIC Asia Bank": 8500.00,
+        "Prabhu Bank": 0.00,
+        "Everest Bank": 0.00,
+      },
+      "eWallet": {
+        "eSewa": 4500.00,
+        "Khalti": 1800.00,
+        "IME Pay": 0.00
+      },
+      "Mobile Banking": {
+        "Global IME Bank": 6000.00,
+        "Nabil Bank": 15000.00,
+        "NIC Asia Bank": 2500.00,
+        "Prabhu Bank": 0.00,
+        "Everest Bank": 0.00
+      }
+    };
+
+    const now = new Date();
+    const getDateStr = (offsetDays) => {
+      const d = new Date(now);
+      d.setDate(now.getDate() - offsetDays);
+      return d.toISOString().split("T")[0];
+    };
+
+    const dummyTransactions = [
+      {
+        id: "tx-dummy-1",
+        title: "Monthly Salary",
+        amount: 85000,
+        type: "income",
+        category: "Income",
+        paymentMethod: "Bank Account",
+        provider: "Nabil Bank",
+        date: getDateStr(5),
+        notes: "Company salary payout",
+        createdAt: new Date(getDateStr(5)).toISOString()
+      },
+      {
+        id: "tx-dummy-2",
+        title: "Internet & Water Bill",
+        amount: 3200,
+        type: "expense",
+        category: "Bills",
+        paymentMethod: "eWallet",
+        provider: "eSewa",
+        date: getDateStr(3),
+        notes: "Monthly utilities",
+        createdAt: new Date(getDateStr(3)).toISOString()
+      },
+      {
+        id: "tx-dummy-3",
+        title: "Groceries at Bhatbhateni",
+        amount: 5400,
+        type: "expense",
+        category: "Food",
+        paymentMethod: "Mobile Banking",
+        provider: "Nabil Bank",
+        date: getDateStr(2),
+        notes: "Weekly kitchen stock",
+        createdAt: new Date(getDateStr(2)).toISOString()
+      },
+      {
+        id: "tx-dummy-4",
+        title: "Pathao / Ride Sharing",
+        amount: 350,
+        type: "expense",
+        category: "Transport",
+        paymentMethod: "Cash",
+        provider: "",
+        date: getDateStr(0),
+        notes: "Ride to office",
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: "tx-dummy-5",
+        title: "Freelance UI Design",
+        amount: 25000,
+        type: "income",
+        category: "Income",
+        paymentMethod: "Bank Account",
+        provider: "Global IME Bank",
+        date: getDateStr(4),
+        notes: "Landing page design project",
+        createdAt: new Date(getDateStr(4)).toISOString()
+      },
+      {
+        id: "tx-dummy-6",
+        title: "Winter Jacket",
+        amount: 4500,
+        type: "expense",
+        category: "Shopping",
+        paymentMethod: "Credit Card",
+        provider: "",
+        date: getDateStr(1),
+        notes: "Shopping for winter clothes",
+        createdAt: new Date(getDateStr(1)).toISOString()
+      },
+      {
+        id: "tx-dummy-7",
+        title: "QFX Cinema Tickets",
+        amount: 900,
+        type: "expense",
+        category: "Entertainment",
+        paymentMethod: "eWallet",
+        provider: "Khalti",
+        date: getDateStr(2),
+        notes: "Movie with friends",
+        createdAt: new Date(getDateStr(2)).toISOString()
+      },
+      {
+        id: "tx-dummy-8",
+        title: "Medicine",
+        amount: 1200,
+        type: "expense",
+        category: "Health",
+        paymentMethod: "Cash",
+        provider: "",
+        date: getDateStr(4),
+        notes: "Vitamins and cold medicine",
+        createdAt: new Date(getDateStr(4)).toISOString()
+      }
+    ];
+
+    localStorage.setItem("kharchaflow_budgets", JSON.stringify(dummyBudgets));
+    localStorage.setItem("kharchaflow_initial_balances", JSON.stringify(dummyInitialBalances));
+    localStorage.setItem("kharchaflow_transactions", JSON.stringify(dummyTransactions));
   }
 };

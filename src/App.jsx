@@ -15,13 +15,13 @@ import AddTransactionModal from "./components/transactions/AddTransactionModal";
 
 
 // Returns true when the page is running inside the installed Android APK
-// (Capacitor sets window.Capacitor; Android WebView adds "wv" to the UA).
+// (Capacitor sets window.Capacitor; Android WebView adds "wv" or "Version/X.Y" to the UA).
 function isRunningInApk() {
   if (typeof window === "undefined") return false;
-  if (window.Capacitor?.isNativePlatform?.()) return true;
+  if (window.Capacitor?.isNativePlatform?.() || window.Capacitor?.platform) return true;
   const ua = navigator.userAgent || "";
-  // "wv" appears in the UA string of Android WebView
-  return /Android/.test(ua) && /wv/.test(ua);
+  // "wv" or "Version/4.0" (standard WebView indicator) check
+  return /Android/i.test(ua) && (/wv/i.test(ua) || /Version\/\d+\.\d+/i.test(ua));
 }
 
 function AppContent() {
@@ -30,7 +30,17 @@ function AppContent() {
   const [activePage, setActivePage] = useState("dashboard");
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   // Never show the APK download banner when already running inside the APK.
-  const [showApkBanner, setShowApkBanner] = useState(() => !isRunningInApk());
+  const [showApkBanner, setShowApkBanner] = useState(false);
+
+  useEffect(() => {
+    // Determine banner visibility after mount to ensure Capacitor has initialized
+    const checkApkStatus = () => {
+      setShowApkBanner(!isRunningInApk());
+    };
+    checkApkStatus();
+    const timer = setTimeout(checkApkStatus, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Programmatically hide the splash screen when app loading finishes
   useEffect(() => {

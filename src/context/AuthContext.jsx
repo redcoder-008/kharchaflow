@@ -118,10 +118,16 @@ export function AuthProvider({ children }) {
     setError(null);
     setLoading(true);
     try {
-      if (isDemoMode) {
-        // Simulate local latency
+      // Force exit demo/offline mode if we have a valid live Firebase config
+      if (hasValidConfig && isDemoMode) {
+        localDB.setIsDemoMode(false);
+        setIsDemoMode(false);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        setLoading(false);
+        return userCredential.user;
+      }
 
-        
+      if (isDemoMode) {
         // Simple demo authentication checks
         const savedProfile = localDB.getProfile();
         const demoUser = {
@@ -152,9 +158,33 @@ export function AuthProvider({ children }) {
     setError(null);
     setLoading(true);
     try {
-      if (isDemoMode) {
-
+      // Force exit demo/offline mode if we have a valid live Firebase config
+      if (hasValidConfig && isDemoMode) {
+        localDB.setIsDemoMode(false);
+        setIsDemoMode(false);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await firebaseUpdateProfile(userCredential.user, { displayName });
         
+        const userDocRef = doc(db, "users", userCredential.user.uid);
+        await setDoc(userDocRef, {
+          email: email.toLowerCase(),
+          displayName,
+          budgets: localDB.getDefaultBudgets(),
+          initialBalances: localDB.getDefaultInitialBalances(),
+          isAdmin: false
+        });
+
+        setUser({
+          uid: userCredential.user.uid,
+          email: userCredential.user.email,
+          displayName: displayName,
+          photoURL: null
+        });
+        setLoading(false);
+        return userCredential.user;
+      }
+
+      if (isDemoMode) {
         const newProfile = { displayName, email, photoURL: null };
         localDB.saveProfile(newProfile);
         
@@ -203,9 +233,15 @@ export function AuthProvider({ children }) {
     setError(null);
     setLoading(true);
     try {
-      if (isDemoMode) {
+      // Clear all guest/demo transactions, budgets, initial balances, and profiles on logout
+      localDB.resetAllData();
+      localStorage.removeItem("kharchaflow_demo_active_user");
 
-        localStorage.removeItem("kharchaflow_demo_active_user");
+      if (isDemoMode) {
+        if (hasValidConfig) {
+          localDB.setIsDemoMode(false);
+          setIsDemoMode(false);
+        }
         setUser(null);
         setLoading(false);
         return true;
@@ -226,8 +262,29 @@ export function AuthProvider({ children }) {
     setError(null);
     setLoading(true);
     try {
-      if (isDemoMode) {
+      // Force exit demo/offline mode if we have a valid live Firebase config
+      if (hasValidConfig && isDemoMode) {
+        localDB.setIsDemoMode(false);
+        setIsDemoMode(false);
+        const result = await signInWithPopup(auth, googleProvider);
+        
+        const userDocRef = doc(db, "users", result.user.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (!userDoc.exists()) {
+          await setDoc(userDocRef, {
+            email: result.user.email?.toLowerCase() || "",
+            displayName: result.user.displayName || "Fintech User",
+            budgets: localDB.getDefaultBudgets(),
+            initialBalances: localDB.getDefaultInitialBalances(),
+            isAdmin: false
+          });
+        }
+        
+        setLoading(false);
+        return result.user;
+      }
 
+      if (isDemoMode) {
         const demoUser = {
           uid: "demo-google-user-789",
           email: "google.yourname@kharchaflow.com",
@@ -376,6 +433,7 @@ export function AuthProvider({ children }) {
     localDB.setIsDemoMode(val);
     setIsDemoMode(val);
     localStorage.removeItem("kharchaflow_demo_active_user");
+    localDB.resetAllData(); // Wipe all local data when toggling demo mode to prevent merging
     setUser(null);
     // clean context reload
     window.location.reload();
@@ -408,6 +466,12 @@ export function AuthProvider({ children }) {
   const sendPhoneOTP = async (phoneNumber, containerId) => {
     setError(null);
     try {
+      // Force exit demo/offline mode if we have a valid live Firebase config
+      if (hasValidConfig && isDemoMode) {
+        localDB.setIsDemoMode(false);
+        setIsDemoMode(false);
+      }
+
       if (isDemoMode) {
         // Demo: simulate OTP sent
         return { verificationId: "demo-verification-id" };
@@ -466,6 +530,33 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const signInAsGuest = () => {
+    // Enable demo mode
+    localDB.setIsDemoMode(true);
+    setIsDemoMode(true);
+    
+    // Seed default guest/demo user
+    const savedProfile = localDB.getProfile();
+    const guestUser = {
+      uid: "guest-user-" + Math.random().toString(36).substring(2, 9),
+      email: savedProfile.email || "guest@kharchaflow.com",
+      displayName: savedProfile.displayName || "Guest User",
+      photoURL: null,
+      isAnonymous: true,
+      isAdmin: false,
+      phone: "",
+      language: "en"
+    };
+    
+    localStorage.setItem("kharchaflow_demo_active_user", JSON.stringify(guestUser));
+    
+    // Seed realistic dummy data for guest demo mode
+    localDB.seedDummyData();
+    
+    setUser(guestUser);
+    return guestUser;
+  };
+
   const value = {
     user,
     loading,
@@ -481,7 +572,8 @@ export function AuthProvider({ children }) {
     deleteUserAccount,
     toggleDemoMode,
     sendPhoneOTP,
-    confirmPhoneOTP
+    confirmPhoneOTP,
+    signInAsGuest
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

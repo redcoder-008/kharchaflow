@@ -11,7 +11,8 @@ import {
   CheckCircle,
   Phone,
   ChevronLeft,
-  ShieldCheck
+  ShieldCheck,
+  X
 } from "lucide-react";
 
 // ── Small inline Google SVG ──────────────────────────────────────────────────
@@ -39,7 +40,9 @@ const PHONE_STEP = {
 };
 
 export default function Auth() {
-  const { login, register, signInWithGoogle, resetPassword, sendPhoneOTP, confirmPhoneOTP, error: authError, isDemoMode } = useAuth();
+  const { login, register, signInWithGoogle, resetPassword, sendPhoneOTP, confirmPhoneOTP, error: authError, isDemoMode, signInAsGuest } = useAuth();
+
+  const [showNoAccountPopup, setShowNoAccountPopup] = useState(false);
 
   const [isLoginTab, setIsLoginTab]       = useState(true);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
@@ -428,14 +431,66 @@ export default function Auth() {
             <button
               onClick={handleGoogleSignIn}
               disabled={loading}
-              className="w-full bg-zinc-950 hover:bg-zinc-800/60 text-zinc-200 border border-zinc-800 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2.5 transition-all duration-150 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none"
+              className="w-full bg-zinc-950 hover:bg-zinc-800/60 text-zinc-200 border border-zinc-800 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2.5 transition-all duration-150 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none mb-3"
             >
               <GoogleIcon size={16} />
               <span className="text-sm">Continue with Google</span>
             </button>
+
+            {/* Continue without account button */}
+            <button
+              type="button"
+              onClick={() => setShowNoAccountPopup(true)}
+              disabled={loading}
+              className="w-full bg-transparent hover:bg-zinc-800/40 text-zinc-400 hover:text-zinc-200 font-semibold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-150 text-xs border border-transparent hover:border-zinc-800"
+            >
+              Continue without account
+            </button>
           </>
         )}
       </div>
+
+      {/* ── No Account Warning Popup ── */}
+      {showNoAccountPopup && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-sm w-full p-6 shadow-2xl relative">
+            
+            {/* Close Button */}
+            <button
+              onClick={() => setShowNoAccountPopup(false)}
+              className="absolute right-4 top-4 p-1.5 rounded-full text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Content */}
+            <div className="flex flex-col items-center text-center mt-2">
+              <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-4">
+                <AlertCircle className="w-6 h-6 stroke-[2.2]" />
+              </div>
+              
+              <h3 className="text-lg font-bold text-white tracking-tight">Continue without Account?</h3>
+              <p className="text-xs text-zinc-400 mt-2.5 leading-relaxed">
+                Your transactions <span className="text-zinc-200 font-semibold">will not be saved</span> to the cloud. You can still explore all features locally.
+              </p>
+
+              <div className="w-full mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowNoAccountPopup(false);
+                    signInAsGuest();
+                  }}
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.99] text-xs shadow-lg shadow-emerald-500/10"
+                >
+                  <span>Continue Offline</span>
+                  <ArrowRight className="w-4 h-4 stroke-[2.2]" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Trust signoff */}
       <span className="text-[10px] text-zinc-600 font-semibold tracking-wider uppercase mt-8 z-10">
