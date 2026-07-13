@@ -7,7 +7,7 @@ import {
 
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { db } from "../db/firebase";
+import { db } from "../../../backend/db/firebase";
 import {
   collection, collectionGroup, getDocs, doc, getDoc,
   query, orderBy, limit, where, Timestamp,onSnapshot 

@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useMemo } from "react";
 import { useAuth } from "./AuthContext";
-import { localDB } from "../db/storage";
-import { db } from "../db/firebase";
+import { localDB } from "../../../backend/db/storage";
+import { db } from "../../../backend/db/firebase";
 import { 
   collection, 
   query, 

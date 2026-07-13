@@ -13,8 +13,8 @@ import {
   RecaptchaVerifier
 } from "firebase/auth";
 import { doc, setDoc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
-import { auth, db, googleProvider, hasValidConfig } from "../db/firebase";
-import { localDB } from "../db/storage";
+import { auth, db, googleProvider, hasValidConfig } from "../../../backend/db/firebase";
+import { localDB } from "../../../backend/db/storage";
 
 const AuthContext = createContext();
 

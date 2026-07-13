@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useFinance } from "../context/FinanceContext";
-import { reloadFirebaseApp, storage } from "../db/firebase";
+import { reloadFirebaseApp, storage } from "../../../backend/db/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { localDB } from "../db/storage";
+import { localDB } from "../../../backend/db/storage";
 import { 
   User, 
   Cloud, 

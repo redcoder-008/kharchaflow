@@ -4,10 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "dev": "vite --config web/frontend/vite.config.js",
+    "build": "vite build --config web/frontend/vite.config.js",
+    "lint": "eslint -c web/frontend/eslint.config.js web/frontend web/backend",
+    "preview": "vite preview --config web/frontend/vite.config.js"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",
