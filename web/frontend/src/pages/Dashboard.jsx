@@ -232,29 +232,41 @@ export default function Dashboard() {
               Payment Sources
             </h4>
             {/* Add Income + Add Expense CTA buttons */}
-            <div className="flex gap-1.5">
+            <div className="flex flex-col gap-2">
               {/* Add Income — solid emerald CTA */}
               <button
                 onClick={() => openAdd("income")}
-                className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-bold
-                         bg-emerald-500 hover:bg-emerald-400 text-zinc-950
-                         shadow-sm hover:shadow-emerald-500/30 hover:shadow-md
-                         active:scale-95 transition-all duration-150"
+                className="group relative flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-bold
+               bg-gradient-to-b from-emerald-400 to-emerald-500 text-zinc-950
+               border border-emerald-300/40
+               shadow-[0_2px_8px_-2px_rgba(16,185,129,0.5)]
+               hover:from-emerald-300 hover:to-emerald-400
+               hover:shadow-[0_4px_14px_-2px_rgba(16,185,129,0.65)]
+               hover:-translate-y-0.5
+               active:translate-y-0 active:scale-95 active:shadow-[0_1px_4px_-1px_rgba(16,185,129,0.5)]
+               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950
+               transition-all duration-150 ease-out cursor-pointer"
               >
-                <TrendingUp className="w-3 h-3" />
-                Add Income
+                <TrendingUp className="w-3.5 h-3.5 transition-transform duration-150 group-hover:scale-110 group-hover:-translate-y-px" />
+                <span>Add Income</span>
               </button>
 
               {/* Add Expense — solid rose CTA */}
               <button
                 onClick={() => openAdd("expense")}
-                className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-bold
-                         bg-rose-500 hover:bg-rose-400 text-white
-                         shadow-sm hover:shadow-rose-500/30 hover:shadow-md
-                         active:scale-95 transition-all duration-150"
+                className="group relative flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-bold
+               bg-gradient-to-b from-rose-400 to-rose-500 text-white
+               border border-rose-300/40
+               shadow-[0_2px_8px_-2px_rgba(244,63,94,0.5)]
+               hover:from-rose-300 hover:to-rose-400
+               hover:shadow-[0_4px_14px_-2px_rgba(244,63,94,0.65)]
+               hover:-translate-y-0.5
+               active:translate-y-0 active:scale-95 active:shadow-[0_1px_4px_-1px_rgba(244,63,94,0.5)]
+               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950
+               transition-all duration-150 ease-out cursor-pointer"
               >
-                <TrendingDown className="w-3 h-3" />
-                Add Expense
+                <TrendingDown className="w-3.5 h-3.5 transition-transform duration-150 group-hover:scale-110 group-hover:translate-y-px" />
+                <span>Add Expense</span>
               </button>
             </div>
           </div>
@@ -465,7 +477,6 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-
         {/* Right Columns: Insights & Charts */}
         <div className="lg:col-span-2 space-y-6">
           {/* Charts Container */}
