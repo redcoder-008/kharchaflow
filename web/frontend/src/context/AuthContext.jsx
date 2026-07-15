@@ -12,7 +12,7 @@ import {
   signInWithPhoneNumber,
   RecaptchaVerifier
 } from "firebase/auth";
-import { doc, setDoc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, deleteDoc } from "firebase/firestore";
 import { auth, db, googleProvider, hasValidConfig } from "../../../backend/db/firebase";
 import { localDB } from "../../../backend/db/storage";
 
@@ -69,6 +69,7 @@ export function AuthProvider({ children }) {
         let isAdmin = false;
         let phone = "";
         let language = "en";
+        let photoURL = firebaseUser.photoURL;
         try {
           const userDocRef = doc(db, "users", firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
@@ -82,6 +83,9 @@ export function AuthProvider({ children }) {
             }
             phone = data.phone || "";
             language = data.language || "en";
+            // Firestore is the source of truth for the optimized fallback image.
+            // Firebase Auth only accepts hosted photo URLs.
+            photoURL = data.photoURL || firebaseUser.photoURL;
           }
         } catch (err) {
           console.error("Failed to fetch user role: ", err);
@@ -95,7 +99,7 @@ export function AuthProvider({ children }) {
           uid: firebaseUser.uid,
           email: firebaseUser.email,
           displayName: firebaseUser.displayName || "Fintech User",
-          photoURL: firebaseUser.photoURL,
+          photoURL,
           isAnonymous: firebaseUser.isAnonymous,
           isAdmin,
           phone,
@@ -361,7 +365,11 @@ export function AuthProvider({ children }) {
           const promises = [];
           const authUpdates = {};
           if (data.displayName !== undefined) authUpdates.displayName = data.displayName;
-          if (data.photoURL !== undefined) authUpdates.photoURL = data.photoURL;
+          // Firebase Auth rejects data URLs, while Firestore safely stores the
+          // compressed fallback used when Cloud Storage is unavailable.
+          if (data.photoURL !== undefined && /^https?:\/\//i.test(data.photoURL)) {
+            authUpdates.photoURL = data.photoURL;
+          }
           
           if (Object.keys(authUpdates).length > 0) {
             promises.push(firebaseUpdateProfile(auth.currentUser, authUpdates));
@@ -375,7 +383,8 @@ export function AuthProvider({ children }) {
           
           if (Object.keys(docUpdates).length > 0) {
             const userDocRef = doc(db, "users", auth.currentUser.uid);
-            promises.push(updateDoc(userDocRef, docUpdates));
+            // Creates the profile document for accounts that predate this field.
+            promises.push(setDoc(userDocRef, docUpdates, { merge: true }));
           }
           
           await Promise.all(promises);

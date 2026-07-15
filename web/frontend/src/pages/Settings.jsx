@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useFinance } from "../context/FinanceContext";
-import { reloadFirebaseApp, storage } from "../../../backend/db/firebase";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { reloadFirebaseApp } from "../../../backend/db/firebase";
 import { localDB } from "../../../backend/db/storage";
 import { 
   User, 
@@ -67,15 +66,50 @@ export default function Settings() {
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert("File size exceeds 2MB limit.");
+      if (!file.type.startsWith("image/")) {
+        setProfileError("Please choose an image file.");
+        e.target.value = "";
         return;
       }
+      if (file.size > 2 * 1024 * 1024) {
+        setProfileError("Image size exceeds the 2MB limit.");
+        e.target.value = "";
+        return;
+      }
+      setProfileError("");
       const objectUrl = URL.createObjectURL(file);
       setPhotoPreview(objectUrl);
       setPhotoFile(file);
     }
   };
+
+  const createCompressedPhoto = (file) => new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const maxSize = 256;
+      let { width, height } = img;
+      if (width > height && width > maxSize) {
+        height *= maxSize / width;
+        width = maxSize;
+      } else if (height > maxSize) {
+        width *= maxSize / height;
+        height = maxSize;
+      }
+      canvas.width = Math.round(width);
+      canvas.height = Math.round(height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", 0.7));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("The selected image could not be read."));
+    };
+    img.src = objectUrl;
+  });
 
   useEffect(() => {
     if (budgets) {
@@ -125,34 +159,10 @@ export default function Settings() {
       let finalPhotoURL = photoURL;
 
       if (photoFile) {
-        if (isDemoMode) {
-          finalPhotoURL = await new Promise((resolve) => {
-            const img = new Image();
-            img.onload = () => {
-              const canvas = document.createElement("canvas");
-              const ctx = canvas.getContext("2d");
-              const MAX_SIZE = 256;
-              let { width, height } = img;
-              if (width > height && width > MAX_SIZE) {
-                height *= MAX_SIZE / width;
-                width = MAX_SIZE;
-              } else if (height > MAX_SIZE) {
-                width *= MAX_SIZE / height;
-                height = MAX_SIZE;
-              }
-              canvas.width = width;
-              canvas.height = height;
-              ctx.drawImage(img, 0, 0, width, height);
-              resolve(canvas.toDataURL("image/jpeg", 0.7));
-            };
-            img.src = URL.createObjectURL(photoFile);
-          });
-        } else {
-          if (!storage) throw new Error("Firebase Storage is not configured.");
-          const fileRef = ref(storage, `users/${user.uid}/profile_${Date.now()}_${photoFile.name}`);
-          await uploadBytes(fileRef, photoFile);
-          finalPhotoURL = await getDownloadURL(fileRef);
-        }
+        const compressedPhoto = await createCompressedPhoto(photoFile);
+        // Store the optimized image in the profile document. This works in demo
+        // mode and live mode without depending on Firebase Storage CORS/rules.
+        finalPhotoURL = compressedPhoto;
       }
 
       await updateUserProfile({
@@ -166,7 +176,7 @@ export default function Settings() {
       setTimeout(() => setProfileSuccess(false), 3000);
     } catch (err) {
       console.error(err);
-      setProfileError("Failed to update profile.");
+      setProfileError(err.message || "Failed to update profile.");
     } finally {
       setProfileSaving(false);
     }
