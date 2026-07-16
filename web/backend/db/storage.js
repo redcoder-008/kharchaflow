@@ -100,6 +100,11 @@ export const localDB = {
     localStorage.setItem("kharchaflow_profile", JSON.stringify(profile));
   },
 
+  saveFeedback: (feedback) => {
+    const savedFeedback = JSON.parse(localStorage.getItem("kharchaflow_feedback") || "[]");
+    localStorage.setItem("kharchaflow_feedback", JSON.stringify([...savedFeedback, feedback]));
+  },
+
   getFirebaseConfig: () => {
     const config = localStorage.getItem("kharchaflow_firebase_config");
     return config ? JSON.parse(config) : null;

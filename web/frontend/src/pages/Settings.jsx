@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useFinance } from "../context/FinanceContext";
 import { useCalendar } from "../context/CalendarContext";
-import { reloadFirebaseApp } from "../../../backend/db/firebase";
+import { db, reloadFirebaseApp } from "../../../backend/db/firebase";
 import { localDB } from "../../../backend/db/storage";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { 
   User, 
   Cloud, 
@@ -17,7 +18,10 @@ import {
   HelpCircle,
   Shield,
   Trash2,
-  CalendarDays
+  CalendarDays,
+  MessageSquare,
+  Star,
+  Send
 } from "lucide-react";
 
 export default function Settings() {
@@ -25,6 +29,11 @@ export default function Settings() {
   const { budgets, updateBudgets } = useFinance();
   const { dateSystem, setDateSystem } = useCalendar();
   const [dateSystemSaving, setDateSystemSaving] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [feedbackSaving, setFeedbackSaving] = useState(false);
+  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
+  const [feedbackError, setFeedbackError] = useState("");
 
   // Profile fields
   const [displayName, setDisplayName] = useState("");
@@ -156,6 +165,50 @@ export default function Settings() {
       alert("Unable to save the date system preference.");
     } finally {
       setDateSystemSaving(false);
+    }
+  };
+
+  const handleFeedbackSubmit = async (e) => {
+    e.preventDefault();
+    setFeedbackError("");
+    setFeedbackSuccess(false);
+
+    if (!feedbackRating) {
+      setFeedbackError("Please choose a rating.");
+      return;
+    }
+    if (!feedbackMessage.trim()) {
+      setFeedbackError("Please write your feedback.");
+      return;
+    }
+
+    setFeedbackSaving(true);
+    const feedback = {
+      rating: feedbackRating,
+      message: feedbackMessage.trim(),
+      userId: user?.uid || null,
+      userEmail: user?.email || null,
+      userName: user?.displayName || null,
+      submittedAt: new Date().toISOString()
+    };
+
+    try {
+      if (isDemoMode || !db) {
+        localDB.saveFeedback(feedback);
+      } else {
+        await addDoc(collection(db, "feedback"), {
+          ...feedback,
+          submittedAt: serverTimestamp()
+        });
+      }
+      setFeedbackRating(0);
+      setFeedbackMessage("");
+      setFeedbackSuccess(true);
+    } catch (err) {
+      console.error("Feedback submission error:", err);
+      setFeedbackError("Unable to send feedback. Please try again.");
+    } finally {
+      setFeedbackSaving(false);
     }
   };
 
@@ -648,6 +701,59 @@ export default function Settings() {
             </form>
           </div>
           )}
+
+          <div className="finance-card">
+            <h4 className="text-xs font-bold text-white tracking-tight uppercase border-b border-zinc-800/60 pb-3.5 mb-5 flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-emerald-400" />
+              Feedback
+            </h4>
+
+            {feedbackError && <p className="mb-4 text-xs font-semibold text-rose-400">{feedbackError}</p>}
+            {feedbackSuccess && <p className="mb-4 text-xs font-semibold text-emerald-400">Thank you for sharing your feedback.</p>}
+
+            <form onSubmit={handleFeedbackSubmit} className="space-y-4">
+              <div>
+                <label className="finance-label">Your Rating</label>
+                <div className="flex gap-1" role="radiogroup" aria-label="App rating">
+                  {[1, 2, 3, 4, 5].map((rating) => (
+                    <button
+                      key={rating}
+                      type="button"
+                      onClick={() => setFeedbackRating(rating)}
+                      className="p-1.5 text-zinc-600 hover:text-amber-400 transition-colors"
+                      role="radio"
+                      aria-checked={feedbackRating === rating}
+                      aria-label={`${rating} out of 5 stars`}
+                    >
+                      <Star className={`w-5 h-5 ${rating <= feedbackRating ? "fill-amber-400 text-amber-400" : ""}`} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="feedback-message" className="finance-label">Your Feedback</label>
+                <textarea
+                  id="feedback-message"
+                  value={feedbackMessage}
+                  onChange={(e) => setFeedbackMessage(e.target.value)}
+                  disabled={feedbackSaving}
+                  maxLength={1000}
+                  rows={4}
+                  className="finance-input resize-y"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={feedbackSaving}
+                className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-zinc-950 font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs transition-colors"
+              >
+                <Send className="w-3.5 h-3.5" />
+                {feedbackSaving ? "Sending..." : "Send Feedback"}
+              </button>
+            </form>
+          </div>
 
           {/* Security & Password */}
           <div className="finance-card">
