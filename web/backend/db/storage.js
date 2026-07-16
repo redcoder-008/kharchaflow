@@ -15,7 +15,8 @@ const DEFAULT_BUDGETS = {
 const DEFAULT_PROFILE = {
   displayName: "Fintech User",
   email: "user@kharchaflow.com",
-  photoURL: null
+  photoURL: null,
+  dateSystem: "gregorian"
 };
 
 // Initial state of balances mapped to payment methods (all default to zero)

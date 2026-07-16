@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useFinance } from "../context/FinanceContext";
-import { formatCurrency, formatDate } from "../utils/helpers";
+import { useCalendar } from "../context/CalendarContext";
+import { formatCurrency, formatDate, formatMonth } from "../utils/helpers";
 import { CATEGORIES } from "../utils/constants";
 import { 
   Search, 
@@ -14,6 +15,7 @@ import AddTransactionModal from "../components/transactions/AddTransactionModal"
 
 export default function History() {
   const { transactions, deleteTransaction } = useFinance();
+  const { dateSystem } = useCalendar();
   
   // Filters & Search State
   const [search, setSearch] = useState("");
@@ -153,8 +155,7 @@ export default function History() {
             >
               <option value="all">All Months</option>
               {uniqueMonths.map((m) => {
-                const [year, month] = m.split("-");
-                const label = new Date(year, month - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+                const label = formatMonth(`${m}-01`, dateSystem);
                 return <option key={m} value={m}>{label}</option>;
               })}
             </select>
@@ -230,7 +231,7 @@ export default function History() {
                     return (
                       <tr key={tx.id} className="hover:bg-zinc-950/30 transition-colors group">
                         {/* Date */}
-                        <td className="py-4.5 text-zinc-400 font-medium pl-2">{formatDate(tx.date)}</td>
+                        <td className="py-4.5 text-zinc-400 font-medium pl-2">{formatDate(tx.date, dateSystem)}</td>
                         
                         {/* Notes */}
                         <td className="py-4.5 font-bold text-zinc-200 max-w-xs truncate">
@@ -314,7 +315,7 @@ export default function History() {
 
                     <div className="flex justify-between items-center text-[10px] text-zinc-500 font-semibold border-t border-zinc-850/50 pt-2.5">
                       <div>
-                        <span>{formatDate(tx.date)}</span>
+                        <span>{formatDate(tx.date, dateSystem)}</span>
                         <span className="mx-1.5">•</span>
                         <span className="text-zinc-400">
                           {tx.paymentMethod} {tx.provider && `(${tx.provider})`}

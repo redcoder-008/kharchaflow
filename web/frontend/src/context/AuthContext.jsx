@@ -54,7 +54,8 @@ export function AuthProvider({ children }) {
           isAnonymous: false,
           isAdmin: true,
           phone: "",
-          language: "en"
+          language: "en",
+          dateSystem: savedProfile.dateSystem || "gregorian"
         };
         localStorage.setItem("kharchaflow_demo_active_user", JSON.stringify(defaultUser));
         setUser(defaultUser);
@@ -69,6 +70,7 @@ export function AuthProvider({ children }) {
         let isAdmin = false;
         let phone = "";
         let language = "en";
+        let dateSystem = "gregorian";
         let photoURL = firebaseUser.photoURL;
         try {
           const userDocRef = doc(db, "users", firebaseUser.uid);
@@ -83,6 +85,7 @@ export function AuthProvider({ children }) {
             }
             phone = data.phone || "";
             language = data.language || "en";
+            dateSystem = data.dateSystem === "nepali" ? "nepali" : "gregorian";
             // Firestore is the source of truth for the optimized fallback image.
             // Firebase Auth only accepts hosted photo URLs.
             photoURL = data.photoURL || firebaseUser.photoURL;
@@ -103,7 +106,8 @@ export function AuthProvider({ children }) {
           isAnonymous: firebaseUser.isAnonymous,
           isAdmin,
           phone,
-          language
+          language,
+          dateSystem
         });
       } else {
         setUser(null);
@@ -139,7 +143,8 @@ export function AuthProvider({ children }) {
           email: email.toLowerCase(),
           displayName: email.toLowerCase() === savedProfile.email.toLowerCase() ? savedProfile.displayName : "Demo User",
           photoURL: null,
-          isAdmin: true
+          isAdmin: true,
+          dateSystem: savedProfile.dateSystem || "gregorian"
         };
         
         localStorage.setItem("kharchaflow_demo_active_user", JSON.stringify(demoUser));
@@ -378,6 +383,7 @@ export function AuthProvider({ children }) {
           const docUpdates = {};
           if (data.phone !== undefined) docUpdates.phone = data.phone;
           if (data.language !== undefined) docUpdates.language = data.language;
+          if (data.dateSystem !== undefined) docUpdates.dateSystem = data.dateSystem;
           if (data.displayName !== undefined) docUpdates.displayName = data.displayName;
           if (data.photoURL !== undefined) docUpdates.photoURL = data.photoURL;
           

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useFinance } from "../context/FinanceContext";
+import { useCalendar } from "../context/CalendarContext";
 import { reloadFirebaseApp } from "../../../backend/db/firebase";
 import { localDB } from "../../../backend/db/storage";
 import { 
@@ -15,12 +16,15 @@ import {
   CheckCircle,
   HelpCircle,
   Shield,
-  Trash2
+  Trash2,
+  CalendarDays
 } from "lucide-react";
 
 export default function Settings() {
   const { user, isDemoMode, logout, updateUserProfile, updateUserPassword, deleteUserAccount } = useAuth();
   const { budgets, updateBudgets } = useFinance();
+  const { dateSystem, setDateSystem } = useCalendar();
+  const [dateSystemSaving, setDateSystemSaving] = useState(false);
 
   // Profile fields
   const [displayName, setDisplayName] = useState("");
@@ -140,6 +144,18 @@ export default function Settings() {
     } else {
       document.documentElement.classList.remove("dark");
       localStorage.setItem("kharchaflow_theme", "light");
+    }
+  };
+
+  const handleDateSystemChange = async (nextDateSystem) => {
+    setDateSystemSaving(true);
+    try {
+      await setDateSystem(nextDateSystem);
+    } catch (err) {
+      console.error("Date system update error:", err);
+      alert("Unable to save the date system preference.");
+    } finally {
+      setDateSystemSaving(false);
     }
   };
 
@@ -401,6 +417,30 @@ export default function Settings() {
                 </button>
               </div>
             </form>
+          </div>
+
+          <div className="finance-card">
+            <h4 className="text-xs font-bold text-white tracking-tight uppercase border-b border-zinc-800/60 pb-3.5 mb-5 flex items-center gap-2">
+              <CalendarDays className="w-4 h-4 text-emerald-400" />
+              Date System
+            </h4>
+
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold text-zinc-300">Calendar Preference</p>
+                <p className="text-[10px] text-zinc-500">Use Gregorian dates or Nepali Bikram Sambat dates across your records.</p>
+              </div>
+              <select
+                aria-label="Date system"
+                value={dateSystem}
+                onChange={(e) => handleDateSystemChange(e.target.value)}
+                disabled={dateSystemSaving}
+                className="finance-input h-10 py-0 w-40 shrink-0 text-xs font-semibold"
+              >
+                <option value="gregorian">English (AD)</option>
+                <option value="nepali">Nepali (BS)</option>
+              </select>
+            </div>
           </div>
 
           {/* Theme & Display Options */}

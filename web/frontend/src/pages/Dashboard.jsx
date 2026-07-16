@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useFinance } from "../context/FinanceContext";
-import { formatCurrency, formatDate } from "../utils/helpers";
+import { useCalendar } from "../context/CalendarContext";
+import { formatCurrency, formatDate, formatMonth } from "../utils/helpers";
 import { CATEGORIES } from "../utils/constants";
 import {
   TrendingUp,
@@ -30,6 +31,7 @@ import AddTransactionModal from "../components/transactions/AddTransactionModal"
 export default function Dashboard() {
   const { transactions, totals, currentBalances, deleteTransaction } =
     useFinance();
+  const { dateSystem } = useCalendar();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [defaultType, setDefaultType] = useState("expense");
   const [expandedSource, setExpandedSource] = useState(null); // 'bank', 'wallet', 'mobile' or null
@@ -103,7 +105,7 @@ export default function Dashboard() {
       const d = new Date();
       d.setMonth(d.getMonth() - i);
       const key = d.toISOString().slice(0, 7); // YYYY-MM
-      const label = d.toLocaleDateString("en-US", { month: "short" });
+      const label = formatMonth(d.toISOString().slice(0, 10), dateSystem, true);
       monthlyData[key] = { name: label, income: 0, expense: 0 };
     }
 
@@ -121,7 +123,7 @@ export default function Dashboard() {
     });
 
     return Object.values(monthlyData);
-  }, [transactions]);
+  }, [transactions, dateSystem]);
 
   const toggleSourceExpand = (source) => {
     if (expandedSource === source) {
@@ -655,7 +657,7 @@ export default function Dashboard() {
                             {tx.notes || tx.category}
                           </p>
                           <p className="text-[9px] text-zinc-500 font-semibold uppercase mt-0.5 flex items-center gap-1 truncate">
-                            <span>{formatDate(tx.date)}</span>
+                            <span>{formatDate(tx.date, dateSystem)}</span>
                             <span>•</span>
                             <span className="text-zinc-400">
                               {tx.paymentMethod}{" "}

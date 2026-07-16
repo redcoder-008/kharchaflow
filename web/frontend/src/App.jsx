@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { FinanceProvider, useFinance } from "./context/FinanceContext";
+import { CalendarProvider } from "./context/CalendarContext";
 import Sidebar from "./components/layouts/Sidebar";
 import BottomNav from "./components/layouts/BottomNav";
 import Header from "./components/layouts/Header";
@@ -205,9 +206,11 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <FinanceProvider>
-        <AppContent />
-      </FinanceProvider>
+      <CalendarProvider>
+        <FinanceProvider>
+          <AppContent />
+        </FinanceProvider>
+      </CalendarProvider>
     </AuthProvider>
   );
 }

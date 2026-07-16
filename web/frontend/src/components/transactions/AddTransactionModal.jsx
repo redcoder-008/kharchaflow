@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useFinance } from "../../context/FinanceContext";
+import { useCalendar } from "../../context/CalendarContext";
 import { CATEGORIES, PAYMENT_METHODS, EWALLET_PROVIDERS, BANK_PROVIDERS } from "../../utils/constants";
-import { formatCurrency } from "../../utils/helpers";
+import { formatCurrency, nepaliDateInputToIso, toNepaliDateInput } from "../../utils/helpers";
 import { 
   X, 
   Calendar,
@@ -12,12 +13,14 @@ import {
 
 export default function AddTransactionModal({ isOpen, onClose, editingTransaction, setActivePage, defaultType }) {
   const { addTransaction, editTransaction, currentBalances } = useFinance();
+  const { dateSystem } = useCalendar();
   
   // Form state fields
   const [type, setType] = useState("expense"); // expense or income
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("Food");
   const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [nepaliDate, setNepaliDate] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [provider, setProvider] = useState("");
   const [notes, setNotes] = useState("");
@@ -33,6 +36,7 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
       setAmount(editingTransaction.amount ? String(editingTransaction.amount) : "");
       setCategory(editingTransaction.category || "Food");
       setDate(editingTransaction.date || new Date().toISOString().split("T")[0]);
+      setNepaliDate(toNepaliDateInput(editingTransaction.date || new Date().toISOString().split("T")[0]));
       setPaymentMethod(editingTransaction.paymentMethod || "Cash");
       setProvider(editingTransaction.provider || "");
       setNotes(editingTransaction.notes || "");
@@ -42,12 +46,19 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
       setAmount("");
       setCategory("Food");
       setDate(new Date().toISOString().split("T")[0]);
+      setNepaliDate(toNepaliDateInput(new Date().toISOString().split("T")[0]));
       setPaymentMethod("Cash");
       setProvider("");
       setNotes("");
     }
     setError("");
   }, [editingTransaction, isOpen, defaultType]);
+
+  useEffect(() => {
+    if (dateSystem === "nepali") {
+      setNepaliDate(toNepaliDateInput(date));
+    }
+  }, [dateSystem, date]);
 
   // Adjust provider and category defaults when payment method or type changes
   useEffect(() => {
@@ -118,8 +129,9 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
       setError("Please enter a valid amount greater than 0.");
       return false;
     }
-    if (!date) {
-      setError("Please select a valid date.");
+    const transactionDate = dateSystem === "nepali" ? nepaliDateInputToIso(nepaliDate) : date;
+    if (!transactionDate) {
+      setError(dateSystem === "nepali" ? "Enter a valid Bikram Sambat date in YYYY-MM-DD format." : "Please select a valid date.");
       return false;
     }
     if (!category) {
@@ -143,11 +155,12 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
     if (!handleFormValidation()) return;
 
     setSaving(true);
+    const transactionDate = dateSystem === "nepali" ? nepaliDateInputToIso(nepaliDate) : date;
     const txObject = {
       amount: Number(amount),
       type,
       category: type === "income" ? "Income" : category,
-      date,
+      date: transactionDate,
       paymentMethod,
       provider: ["Cash", "Credit Card"].includes(paymentMethod) ? "" : provider,
       notes: notes.trim()
@@ -276,18 +289,21 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
 
           {/* 3. Transaction Date */}
           <div>
-            <label htmlFor="date" className="finance-label">Transaction Date</label>
+            <label htmlFor="date" className="finance-label">Transaction Date {dateSystem === "nepali" ? "(Bikram Sambat)" : ""}</label>
             <div className="relative">
               <input
                 id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
+                type={dateSystem === "nepali" ? "text" : "date"}
+                inputMode={dateSystem === "nepali" ? "numeric" : undefined}
+                placeholder={dateSystem === "nepali" ? "2083-04-01" : undefined}
+                value={dateSystem === "nepali" ? nepaliDate : date}
+                onChange={(e) => dateSystem === "nepali" ? setNepaliDate(e.target.value) : setDate(e.target.value)}
                 required
                 className="finance-input pl-10"
               />
               <Calendar className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-zinc-500" />
             </div>
+            {dateSystem === "nepali" && <p className="mt-1.5 text-[10px] text-zinc-500">Enter the Nepali date as YYYY-MM-DD.</p>}
           </div>
 
           {/* 4. Category Selector (Only for expenses, locked as Income for Income type) */}
