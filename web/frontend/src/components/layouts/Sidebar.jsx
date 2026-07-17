@@ -70,7 +70,7 @@ export default function Sidebar({ activePage, setActivePage }) {
                 <p className="text-sm font-semibold text-zinc-200 truncate leading-none mb-1">
                   {user.displayName || "Fintech User"}
                 </p>
-                <p className="text-xs text-zinc-500 truncate">{user.email}</p>
+                <p className="text-xs text-zinc-500 truncate">{user.isAnonymous ? "Guest session" : user.email}</p>
               </div>
             </div>
 

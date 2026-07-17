@@ -542,27 +542,25 @@ export function AuthProvider({ children }) {
   };
 
   const signInAsGuest = () => {
-    // Enable demo mode
+    // Guest mode is an isolated session and must not reuse a prior account profile.
+    localDB.resetAllData();
     localDB.setIsDemoMode(true);
     setIsDemoMode(true);
     
-    // Seed default guest/demo user
-    const savedProfile = localDB.getProfile();
     const guestUser = {
       uid: "guest-user-" + Math.random().toString(36).substring(2, 9),
-      email: savedProfile.email || "guest@kharchaflow.com",
-      displayName: savedProfile.displayName || "Guest User",
+      email: null,
+      displayName: "Guest User",
       photoURL: null,
       isAnonymous: true,
       isAdmin: false,
       phone: "",
-      language: "en"
+      language: "en",
+      dateSystem: "gregorian"
     };
-    
+
+    // Guests start with no transactions, zero balances, and zero savings.
     persistDemoUser(guestUser);
-    
-    // Seed realistic dummy data for guest demo mode
-    localDB.seedDummyData();
     
     return { ...guestUser, isAdmin: false };
   };
