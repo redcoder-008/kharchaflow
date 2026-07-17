@@ -1,10 +1,10 @@
 import { useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
-import { 
-  TrendingUp, 
-  Mail, 
-  Lock, 
-  User, 
+import {
+  TrendingUp,
+  Mail,
+  Lock,
+  User,
   ArrowRight,
   Loader2,
   AlertCircle,
@@ -12,17 +12,29 @@ import {
   Phone,
   ChevronLeft,
   ShieldCheck,
-  X
+  X,
 } from "lucide-react";
 
 // ── Small inline Google SVG ──────────────────────────────────────────────────
 function GoogleIcon({ size = 16 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="#EA4335" d="M5.27 9.76A7.08 7.08 0 0 1 12 4.9c1.84 0 3.5.67 4.8 1.76L20.1 3.4A11.88 11.88 0 0 0 12 .5C8.16.5 4.83 2.62 3.06 5.74l2.21 4.02z"/>
-      <path fill="#34A853" d="M12 23.5c3.18 0 5.88-1.05 7.85-2.85l-3.63-2.95A7.08 7.08 0 0 1 12 19.1a7.08 7.08 0 0 1-6.72-4.82L3.06 18.26C4.83 21.38 8.16 23.5 12 23.5z"/>
-      <path fill="#4A90D9" d="M22.46 12.23c0-.81-.07-1.59-.2-2.34H12v4.43h5.86a5.01 5.01 0 0 1-2.17 3.28l3.63 2.95c2.12-1.96 3.14-4.85 3.14-8.32z"/>
-      <path fill="#FBBC05" d="M5.28 14.28A7.11 7.11 0 0 1 4.9 12c0-.79.14-1.56.38-2.28L3.06 5.74A11.93 11.93 0 0 0 .5 12c0 1.93.46 3.75 1.27 5.36l2.21-4.02-.71.94z"/>
+      <path
+        fill="#EA4335"
+        d="M5.27 9.76A7.08 7.08 0 0 1 12 4.9c1.84 0 3.5.67 4.8 1.76L20.1 3.4A11.88 11.88 0 0 0 12 .5C8.16.5 4.83 2.62 3.06 5.74l2.21 4.02z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 23.5c3.18 0 5.88-1.05 7.85-2.85l-3.63-2.95A7.08 7.08 0 0 1 12 19.1a7.08 7.08 0 0 1-6.72-4.82L3.06 18.26C4.83 21.38 8.16 23.5 12 23.5z"
+      />
+      <path
+        fill="#4A90D9"
+        d="M22.46 12.23c0-.81-.07-1.59-.2-2.34H12v4.43h5.86a5.01 5.01 0 0 1-2.17 3.28l3.63 2.95c2.12-1.96 3.14-4.85 3.14-8.32z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.28 14.28A7.11 7.11 0 0 1 4.9 12c0-.79.14-1.56.38-2.28L3.06 5.74A11.93 11.93 0 0 0 .5 12c0 1.93.46 3.75 1.27 5.36l2.21-4.02-.71.94z"
+      />
     </svg>
   );
 }
@@ -36,53 +48,83 @@ const MODE = {
 // Phone step enum
 const PHONE_STEP = {
   ENTER_PHONE: "enter_phone",
-  ENTER_OTP:   "enter_otp",
+  ENTER_OTP: "enter_otp",
 };
 
 export default function Auth() {
-  const { login, register, signInWithGoogle, resetPassword, sendPhoneOTP, confirmPhoneOTP, error: authError, isDemoMode, signInAsGuest } = useAuth();
+  const {
+    login,
+    register,
+    signInWithGoogle,
+    resetPassword,
+    sendPhoneOTP,
+    confirmPhoneOTP,
+    error: authError,
+    isDemoMode,
+    signInAsGuest,
+  } = useAuth();
 
   const [showNoAccountPopup, setShowNoAccountPopup] = useState(false);
 
-  const [isLoginTab, setIsLoginTab]       = useState(true);
+  const [isLoginTab, setIsLoginTab] = useState(true);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
-  const [authMode, setAuthMode]           = useState(MODE.EMAIL);  // email | phone
-  
+  const [authMode, setAuthMode] = useState(MODE.EMAIL); // email | phone
+
   // Email form
-  const [email, setEmail]             = useState("");
-  const [password, setPassword]       = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
 
   // Phone form
-  const [phone, setPhone]             = useState("");
-  const [otp, setOtp]                 = useState("");
-  const [phoneName, setPhoneName]     = useState("");
-  const [phoneStep, setPhoneStep]     = useState(PHONE_STEP.ENTER_PHONE);
-  const confirmationRef               = useRef(null);
-  const recaptchaContainerId          = "recaptcha-container";
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [phoneName, setPhoneName] = useState("");
+  const [phoneStep, setPhoneStep] = useState(PHONE_STEP.ENTER_PHONE);
+  const confirmationRef = useRef(null);
+  const recaptchaContainerId = "recaptcha-container";
 
   // UI states
-  const [loading, setLoading]               = useState(false);
+  const [loading, setLoading] = useState(false);
   const [validationError, setValidationError] = useState("");
-  const [successMessage, setSuccessMessage]   = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   // ── Validation ──────────────────────────────────────────────────────────────
   const handleValidation = () => {
     setValidationError("");
-    if (!email) { setValidationError("Email address is required."); return false; }
-    if (!/\S+@\S+\.\S+/.test(email)) { setValidationError("Please enter a valid email address."); return false; }
-    if (!isForgotPassword) {
-      if (!password) { setValidationError("Password is required."); return false; }
-      if (password.length < 6) { setValidationError("Password must be at least 6 characters long."); return false; }
+    if (!email) {
+      setValidationError("Email address is required.");
+      return false;
     }
-    if (!isLoginTab && !isForgotPassword && !displayName.trim()) { setValidationError("Please enter your full name."); return false; }
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      setValidationError("Please enter a valid email address.");
+      return false;
+    }
+    if (!isForgotPassword) {
+      if (!password) {
+        setValidationError("Password is required.");
+        return false;
+      }
+      if (password.length < 6) {
+        setValidationError("Password must be at least 6 characters long.");
+        return false;
+      }
+    }
+    if (!isLoginTab && !isForgotPassword && !displayName.trim()) {
+      setValidationError("Please enter your full name.");
+      return false;
+    }
     return true;
   };
 
   const handlePhoneValidation = () => {
     setValidationError("");
     const digits = phone.replace(/\D/g, "");
-    if (digits.length < 10) { setValidationError("Enter a valid phone number with country code (e.g. +91 98765 43210)."); return false; }
+    if (digits.length < 10) {
+      setValidationError(
+        "Enter a valid phone number with country code (e.g. +91 98765 43210).",
+      );
+      return false;
+    }
     return true;
   };
 
@@ -137,7 +179,11 @@ export default function Auth() {
       const result = await sendPhoneOTP(normalized, recaptchaContainerId);
       confirmationRef.current = result;
       setPhoneStep(PHONE_STEP.ENTER_OTP);
-      setSuccessMessage(isDemoMode ? "Demo mode: use OTP 123456" : "OTP sent! Check your messages.");
+      setSuccessMessage(
+        isDemoMode
+          ? "Demo mode: use OTP 123456"
+          : "OTP sent! Check your messages.",
+      );
     } catch (err) {
       setValidationError(err.message || "Failed to send OTP.");
     } finally {
@@ -149,10 +195,17 @@ export default function Auth() {
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
     setValidationError("");
-    if (!otp || otp.length < 6) { setValidationError("Enter the 6-digit OTP."); return; }
+    if (!otp || otp.length < 6) {
+      setValidationError("Enter the 6-digit OTP.");
+      return;
+    }
     setLoading(true);
     try {
-      await confirmPhoneOTP(confirmationRef.current, otp, phoneName || undefined);
+      await confirmPhoneOTP(
+        confirmationRef.current,
+        otp,
+        phoneName || undefined,
+      );
     } catch (err) {
       setValidationError(err.message || "Invalid OTP. Please try again.");
     } finally {
@@ -180,7 +233,6 @@ export default function Auth() {
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      
       {/* Decorative Grid Overlay */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
 
@@ -192,28 +244,39 @@ export default function Auth() {
         <div className="w-13 h-13 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4 shadow-sm">
           <TrendingUp className="w-7 h-7 stroke-[2.2]" />
         </div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-white">KharchaFlow</h1>
-        <p className="text-sm text-zinc-400 font-medium mt-1.5">Track money effortlessly.</p>
+        <h1 className="text-3xl font-extrabold tracking-tight text-white">
+          KharchaFlow
+        </h1>
+        <p className="text-sm text-zinc-400 font-medium mt-1.5">
+          Track money effortlessly.
+        </p>
       </div>
 
       {/* Auth Card */}
       <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 shadow-2xl relative z-10">
-
         {/* ── Tab Switcher ── */}
         {!isForgotPassword && (
           <div className="flex bg-zinc-950 p-1.5 rounded-xl border border-zinc-800/60 mb-6">
             <button
               onClick={() => switchTab(true)}
               className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-150 ${
-                isLoginTab ? "bg-zinc-800 text-white shadow-sm" : "text-zinc-400 hover:text-zinc-200"
+                isLoginTab
+                  ? "bg-zinc-800 text-white shadow-sm"
+                  : "text-zinc-400 hover:text-zinc-200"
               }`}
-            >Sign In</button>
+            >
+              Sign In
+            </button>
             <button
               onClick={() => switchTab(false)}
               className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-150 ${
-                !isLoginTab ? "bg-zinc-800 text-white shadow-sm" : "text-zinc-400 hover:text-zinc-200"
+                !isLoginTab
+                  ? "bg-zinc-800 text-white shadow-sm"
+                  : "text-zinc-400 hover:text-zinc-200"
               }`}
-            >Register</button>
+            >
+              Register
+            </button>
           </div>
         )}
 
@@ -246,11 +309,17 @@ export default function Auth() {
         {/* ── Title ── */}
         <div className="mb-6">
           <h2 className="text-xl font-bold text-white tracking-tight">
-            {isForgotPassword 
+            {isForgotPassword
               ? "Recover Password"
               : authMode === MODE.PHONE
-                ? phoneStep === PHONE_STEP.ENTER_OTP ? "Enter OTP" : (isLoginTab ? "Sign in with Phone" : "Register with Phone")
-                : isLoginTab ? "Sign in to account" : "Create your account"}
+                ? phoneStep === PHONE_STEP.ENTER_OTP
+                  ? "Enter OTP"
+                  : isLoginTab
+                    ? "Sign in with Phone"
+                    : "Register with Phone"
+                : isLoginTab
+                  ? "Sign in to account"
+                  : "Create your account"}
           </h2>
           <p className="text-xs text-zinc-400 mt-1">
             {isForgotPassword
@@ -269,7 +338,9 @@ export default function Auth() {
         {(validationError || authError) && (
           <div className="mb-5 p-3.5 bg-rose-500/10 border border-rose-500/25 rounded-xl flex items-start gap-2.5 text-rose-400 text-xs">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span className="font-medium leading-normal">{validationError || authError}</span>
+            <span className="font-medium leading-normal">
+              {validationError || authError}
+            </span>
           </div>
         )}
         {successMessage && (
@@ -282,14 +353,22 @@ export default function Auth() {
         {/* ══════════════ EMAIL AUTH FORM ══════════════ */}
         {(authMode === MODE.EMAIL || isForgotPassword) && (
           <form onSubmit={handleSubmit} className="space-y-4">
-
             {/* Full Name – register only */}
             {!isLoginTab && !isForgotPassword && (
               <div>
-                <label htmlFor="displayName" className="finance-label">Full Name</label>
+                <label htmlFor="displayName" className="finance-label">
+                  Full Name
+                </label>
                 <div className="relative">
-                  <input id="displayName" type="text" placeholder="Your Name" value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)} disabled={loading} className="finance-input pl-10" />
+                  <input
+                    id="displayName"
+                    type="text"
+                    placeholder="Your Name"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    disabled={loading}
+                    className="finance-input pl-10"
+                  />
                   <User className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-zinc-500" />
                 </div>
               </div>
@@ -297,10 +376,19 @@ export default function Auth() {
 
             {/* Email */}
             <div>
-              <label htmlFor="email" className="finance-label">Email Address</label>
+              <label htmlFor="email" className="finance-label">
+                Email Address
+              </label>
               <div className="relative">
-                <input id="email" type="email" placeholder="yourname@gmail.com" value={email}
-                  onChange={(e) => setEmail(e.target.value)} disabled={loading} className="finance-input pl-10" />
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="yourname@gmail.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                  className="finance-input pl-10"
+                />
                 <Mail className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-zinc-500" />
               </div>
             </div>
@@ -309,29 +397,55 @@ export default function Auth() {
             {!isForgotPassword && (
               <div>
                 <div className="flex justify-between items-center mb-1.5">
-                  <label htmlFor="password" className="finance-label mb-0">Password</label>
+                  <label htmlFor="password" className="finance-label mb-0">
+                    Password
+                  </label>
                   {isLoginTab && (
-                    <button type="button"
-                      onClick={() => { setIsForgotPassword(true); setValidationError(""); setSuccessMessage(""); }}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsForgotPassword(true);
+                        setValidationError("");
+                        setSuccessMessage("");
+                      }}
                       className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
-                    >Forgot?</button>
+                    >
+                      Forgot?
+                    </button>
                   )}
                 </div>
                 <div className="relative">
-                  <input id="password" type="password" placeholder="••••••••" value={password}
-                    onChange={(e) => setPassword(e.target.value)} disabled={loading} className="finance-input pl-10" />
+                  <input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={loading}
+                    className="finance-input pl-10"
+                  />
                   <Lock className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-zinc-500" />
                 </div>
               </div>
             )}
 
             {/* Submit */}
-            <button type="submit" disabled={loading}
+            <button
+              type="submit"
+              disabled={loading}
               className="w-full bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/10 active:scale-[0.99] transition-all duration-150 disabled:opacity-50 disabled:pointer-events-none mt-2"
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
                 <>
-                  <span>{isForgotPassword ? "Send Reset Link" : isLoginTab ? "Sign In" : "Create Account"}</span>
+                  <span>
+                    {isForgotPassword
+                      ? "Send Reset Link"
+                      : isLoginTab
+                        ? "Sign In"
+                        : "Create Account"}
+                  </span>
                   <ArrowRight className="w-4 h-4 stroke-[2.2]" />
                 </>
               )}
@@ -348,30 +462,57 @@ export default function Auth() {
                 {/* Name – register only */}
                 {!isLoginTab && (
                   <div>
-                    <label htmlFor="phoneName" className="finance-label">Full Name</label>
+                    <label htmlFor="phoneName" className="finance-label">
+                      Full Name
+                    </label>
                     <div className="relative">
-                      <input id="phoneName" type="text" placeholder="Your Name" value={phoneName}
-                        onChange={(e) => setPhoneName(e.target.value)} disabled={loading} className="finance-input pl-10" />
+                      <input
+                        id="phoneName"
+                        type="text"
+                        placeholder="Your Name"
+                        value={phoneName}
+                        onChange={(e) => setPhoneName(e.target.value)}
+                        disabled={loading}
+                        className="finance-input pl-10"
+                      />
                       <User className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-zinc-500" />
                     </div>
                   </div>
                 )}
 
                 <div>
-                  <label htmlFor="phone" className="finance-label">Phone Number</label>
+                  <label htmlFor="phone" className="finance-label">
+                    Phone Number
+                  </label>
                   <div className="relative">
-                    <input id="phone" type="tel" placeholder="+91 98765 43210" value={phone}
-                      onChange={(e) => setPhone(e.target.value)} disabled={loading} className="finance-input pl-10" />
+                    <input
+                      id="phone"
+                      type="tel"
+                      placeholder="+91 98765 43210"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      disabled={loading}
+                      className="finance-input pl-10"
+                    />
                     <Phone className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-zinc-500" />
                   </div>
-                  <p className="text-[10px] text-zinc-600 mt-1.5 ml-0.5">Include country code e.g. +91 for India</p>
+                  <p className="text-[10px] text-zinc-600 mt-1.5 ml-0.5">
+                    Include country code e.g. +91 for India
+                  </p>
                 </div>
 
-                <button type="submit" disabled={loading}
+                <button
+                  type="submit"
+                  disabled={loading}
                   className="w-full bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/10 active:scale-[0.99] transition-all duration-150 disabled:opacity-50 disabled:pointer-events-none mt-2"
                 >
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                    <><span>Send OTP</span><ArrowRight className="w-4 h-4 stroke-[2.2]" /></>
+                  {loading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <span>Send OTP</span>
+                      <ArrowRight className="w-4 h-4 stroke-[2.2]" />
+                    </>
                   )}
                 </button>
               </form>
@@ -381,26 +522,50 @@ export default function Auth() {
             {phoneStep === PHONE_STEP.ENTER_OTP && (
               <form onSubmit={handleVerifyOTP} className="space-y-4">
                 <div>
-                  <label htmlFor="otp" className="finance-label">6-Digit OTP</label>
+                  <label htmlFor="otp" className="finance-label">
+                    6-Digit OTP
+                  </label>
                   <div className="relative">
-                    <input id="otp" type="number" inputMode="numeric" placeholder="123456" maxLength={6}
-                      value={otp} onChange={(e) => setOtp(e.target.value.slice(0, 6))}
-                      disabled={loading} className="finance-input pl-10 tracking-[0.4em] font-bold text-white text-center" />
+                    <input
+                      id="otp"
+                      type="number"
+                      inputMode="numeric"
+                      placeholder="123456"
+                      maxLength={6}
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.slice(0, 6))}
+                      disabled={loading}
+                      className="finance-input pl-10 tracking-[0.4em] font-bold text-white text-center"
+                    />
                     <ShieldCheck className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-zinc-500" />
                   </div>
                 </div>
 
-                <button type="submit" disabled={loading}
+                <button
+                  type="submit"
+                  disabled={loading}
                   className="w-full bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/10 active:scale-[0.99] transition-all duration-150 disabled:opacity-50 disabled:pointer-events-none"
                 >
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                    <><span>Verify &amp; Continue</span><ArrowRight className="w-4 h-4 stroke-[2.2]" /></>
+                  {loading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <span>Verify &amp; Continue</span>
+                      <ArrowRight className="w-4 h-4 stroke-[2.2]" />
+                    </>
                   )}
                 </button>
 
                 {/* Back to phone entry */}
-                <button type="button"
-                  onClick={() => { setPhoneStep(PHONE_STEP.ENTER_PHONE); setOtp(""); setValidationError(""); setSuccessMessage(""); confirmationRef.current = null; }}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPhoneStep(PHONE_STEP.ENTER_PHONE);
+                    setOtp("");
+                    setValidationError("");
+                    setSuccessMessage("");
+                    confirmationRef.current = null;
+                  }}
                   className="w-full flex items-center justify-center gap-1 text-xs font-semibold text-zinc-500 hover:text-zinc-300 transition-colors"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" /> Change phone number
@@ -413,48 +578,56 @@ export default function Auth() {
         {/* Forgot Password back nav */}
         {isForgotPassword && (
           <button
-            onClick={() => { setIsForgotPassword(false); setValidationError(""); setSuccessMessage(""); }}
+            onClick={() => {
+              setIsForgotPassword(false);
+              setValidationError("");
+              setSuccessMessage("");
+            }}
             className="w-full text-center text-xs font-semibold text-zinc-400 hover:text-zinc-300 mt-5 transition-colors"
-          >Back to Login</button>
+          >
+            Back to Login
+          </button>
         )}
 
         {/* ── Separator + Social buttons (not on forgot / phone OTP step) ── */}
-        {!isForgotPassword && !(authMode === MODE.PHONE && phoneStep === PHONE_STEP.ENTER_OTP) && (
-          <>
-            <div className="relative flex py-4.5 items-center">
-              <div className="flex-grow border-t border-zinc-800/80" />
-              <span className="flex-shrink mx-4 text-[10px] uppercase font-bold text-zinc-500 tracking-wider">or continue with</span>
-              <div className="flex-grow border-t border-zinc-800/80" />
-            </div>
+        {!isForgotPassword &&
+          !(authMode === MODE.PHONE && phoneStep === PHONE_STEP.ENTER_OTP) && (
+            <>
+              <div className="relative flex py-4 items-center mt-6">
+                <div className="flex-grow border-t border-zinc-800/80" />
+                <span className="flex-shrink mx-4 text-[10px] uppercase font-bold text-zinc-500 tracking-wider">
+                  or continue with
+                </span>
+                <div className="flex-grow border-t border-zinc-800/80" />
+              </div>
 
-            {/* Google Sign-In — compact pill */}
-            <button
-              onClick={handleGoogleSignIn}
-              disabled={loading}
-              className="w-full bg-zinc-950 hover:bg-zinc-800/60 text-zinc-200 border border-zinc-800 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2.5 transition-all duration-150 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none mb-3"
-            >
-              <GoogleIcon size={16} />
-              <span className="text-sm">Continue with Google</span>
-            </button>
+              {/* Google Sign-In — compact pill */}
+              <button
+                onClick={handleGoogleSignIn}
+                disabled={loading}
+                className="w-full bg-zinc-950 hover:bg-zinc-800/60 text-zinc-200 border border-zinc-800 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2.5 transition-all duration-150 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none mb-3"
+              >
+                <GoogleIcon size={16} />
+                <span className="text-sm">Continue with Google</span>
+              </button>
 
-            {/* Continue without account button */}
-            <button
-              type="button"
-              onClick={() => setShowNoAccountPopup(true)}
-              disabled={loading}
-              className="w-full bg-transparent hover:bg-zinc-800/40 text-zinc-400 hover:text-zinc-200 font-semibold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-150 text-xs border border-transparent hover:border-zinc-800"
-            >
-              Continue without account
-            </button>
-          </>
-        )}
+              {/* Continue without account button */}
+              <button
+                type="button"
+                onClick={() => setShowNoAccountPopup(true)}
+                disabled={loading}
+                className="w-full bg-transparent hover:bg-zinc-800/40 text-zinc-400 hover:text-zinc-200 font-semibold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-150 text-xs border border-transparent hover:border-zinc-800"
+              >
+                Continue without account
+              </button>
+            </>
+          )}
       </div>
 
       {/* ── No Account Warning Popup ── */}
       {showNoAccountPopup && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-sm w-full p-6 shadow-2xl relative">
-            
             {/* Close Button */}
             <button
               onClick={() => setShowNoAccountPopup(false)}
@@ -468,10 +641,16 @@ export default function Auth() {
               <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-4">
                 <AlertCircle className="w-6 h-6 stroke-[2.2]" />
               </div>
-              
-              <h3 className="text-lg font-bold text-white tracking-tight">Continue without Account?</h3>
+
+              <h3 className="text-lg font-bold text-white tracking-tight">
+                Continue without Account?
+              </h3>
               <p className="text-xs text-zinc-400 mt-2.5 leading-relaxed">
-                Your transactions <span className="text-zinc-200 font-semibold">will not be saved</span> to the cloud. You can still explore all features locally.
+                Your transactions{" "}
+                <span className="text-zinc-200 font-semibold">
+                  will not be saved
+                </span>{" "}
+                to the cloud. You can still explore all features locally.
               </p>
 
               <div className="w-full mt-6">
