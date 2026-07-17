@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useRef } from "react";
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
@@ -36,29 +36,27 @@ export function AuthProvider({ children }) {
     return savedDemoMode === "true";
   });
 
+  const persistDemoUser = useCallback((demoUser) => {
+    const safeDemoUser = { ...demoUser, isAdmin: false };
+    localStorage.setItem("kharchaflow_demo_active_user", JSON.stringify(safeDemoUser));
+    localStorage.setItem("kharchaflow_demo_authenticated", "true");
+    setUser(safeDemoUser);
+    return safeDemoUser;
+  }, []);
+
   // Track Firebase state if config is valid and not running in demo mode
   useEffect(() => {
     if (!hasValidConfig || isDemoMode) {
       // Demo Mode Authentication Setup
-      const savedProfile = localDB.getProfile();
       const demoUser = localStorage.getItem("kharchaflow_demo_active_user");
-      if (demoUser) {
-        setUser(JSON.parse(demoUser));
+      const hasAuthenticatedDemoSession = localStorage.getItem("kharchaflow_demo_authenticated") === "true";
+      if (demoUser && hasAuthenticatedDemoSession) {
+        // Demo accounts never receive admin access, including sessions created by older releases.
+        persistDemoUser(JSON.parse(demoUser));
       } else {
-        // Auto log in with seeded profile for rich out-of-the-box demo experience
-        const defaultUser = {
-          uid: "demo-user-123",
-          email: savedProfile.email,
-          displayName: savedProfile.displayName,
-          photoURL: null,
-          isAnonymous: false,
-          isAdmin: true,
-          phone: "",
-          language: "en",
-          dateSystem: savedProfile.dateSystem || "gregorian"
-        };
-        localStorage.setItem("kharchaflow_demo_active_user", JSON.stringify(defaultUser));
-        setUser(defaultUser);
+        // A fresh installation starts at authentication rather than creating a demo admin account.
+        localStorage.removeItem("kharchaflow_demo_active_user");
+        setUser(null);
       }
       setLoading(false);
       return;
@@ -119,7 +117,7 @@ export function AuthProvider({ children }) {
     });
 
     return () => unsubscribe();
-  }, [isDemoMode]);
+  }, [isDemoMode, persistDemoUser]);
 
   // Auth Operations
   const login = async (email, password) => {
@@ -143,12 +141,11 @@ export function AuthProvider({ children }) {
           email: email.toLowerCase(),
           displayName: email.toLowerCase() === savedProfile.email.toLowerCase() ? savedProfile.displayName : "Demo User",
           photoURL: null,
-          isAdmin: true,
+          isAdmin: false,
           dateSystem: savedProfile.dateSystem || "gregorian"
         };
         
-        localStorage.setItem("kharchaflow_demo_active_user", JSON.stringify(demoUser));
-        setUser(demoUser);
+        persistDemoUser(demoUser);
         setLoading(false);
         return true;
       } else {
@@ -202,11 +199,10 @@ export function AuthProvider({ children }) {
           email: email.toLowerCase(),
           displayName: displayName,
           photoURL: null,
-          isAdmin: true
+          isAdmin: false
         };
         
-        localStorage.setItem("kharchaflow_demo_active_user", JSON.stringify(demoUser));
-        setUser(demoUser);
+        persistDemoUser(demoUser);
         setLoading(false);
         return true;
       } else {
@@ -245,6 +241,7 @@ export function AuthProvider({ children }) {
       // Clear all guest/demo transactions, budgets, initial balances, and profiles on logout
       localDB.resetAllData();
       localStorage.removeItem("kharchaflow_demo_active_user");
+      localStorage.removeItem("kharchaflow_demo_authenticated");
 
       if (isDemoMode) {
         if (hasValidConfig) {
@@ -299,15 +296,14 @@ export function AuthProvider({ children }) {
           email: "google.yourname@kharchaflow.com",
           displayName: "Your Name (Google)",
           photoURL: "https://lh3.googleusercontent.com/a/default-user=s96-c",
-          isAdmin: true
+          isAdmin: false
         };
-        localStorage.setItem("kharchaflow_demo_active_user", JSON.stringify(demoUser));
         localDB.saveProfile({
           displayName: demoUser.displayName,
           email: demoUser.email,
           photoURL: demoUser.photoURL
         });
-        setUser(demoUser);
+        persistDemoUser(demoUser);
         setLoading(false);
         return true;
       } else {
@@ -362,8 +358,7 @@ export function AuthProvider({ children }) {
         localDB.saveProfile(updatedProfile);
         
         const updatedUser = { ...user, ...data };
-        localStorage.setItem("kharchaflow_demo_active_user", JSON.stringify(updatedUser));
-        setUser(updatedUser);
+        persistDemoUser(updatedUser);
         return true;
       } else {
         if (auth.currentUser) {
@@ -423,6 +418,7 @@ export function AuthProvider({ children }) {
     try {
       if (isDemoMode) {
         localStorage.removeItem("kharchaflow_demo_active_user");
+        localStorage.removeItem("kharchaflow_demo_authenticated");
         setUser(null);
         return true;
       } else {
@@ -448,6 +444,7 @@ export function AuthProvider({ children }) {
     localDB.setIsDemoMode(val);
     setIsDemoMode(val);
     localStorage.removeItem("kharchaflow_demo_active_user");
+    localStorage.removeItem("kharchaflow_demo_authenticated");
     localDB.resetAllData(); // Wipe all local data when toggling demo mode to prevent merging
     setUser(null);
     // clean context reload
@@ -514,8 +511,7 @@ export function AuthProvider({ children }) {
           photoURL: null,
           isAdmin: false
         };
-        localStorage.setItem("kharchaflow_demo_active_user", JSON.stringify(phoneUser));
-        setUser(phoneUser);
+        persistDemoUser(phoneUser);
         setLoading(false);
         return true;
       }
@@ -563,13 +559,12 @@ export function AuthProvider({ children }) {
       language: "en"
     };
     
-    localStorage.setItem("kharchaflow_demo_active_user", JSON.stringify(guestUser));
+    persistDemoUser(guestUser);
     
     // Seed realistic dummy data for guest demo mode
     localDB.seedDummyData();
     
-    setUser(guestUser);
-    return guestUser;
+    return { ...guestUser, isAdmin: false };
   };
 
   const value = {
