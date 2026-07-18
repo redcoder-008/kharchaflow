@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useFinance } from "../context/FinanceContext";
-import { formatCurrency } from "../utils/helpers";
+import { useCalendar } from "../context/CalendarContext";
+import { formatCurrency, formatMonth } from "../utils/helpers";
 import { CATEGORIES } from "../utils/constants";
 import { 
   AreaChart, 
@@ -19,6 +20,7 @@ import {
 
 export default function Analytics() {
   const { transactions, budgets } = useFinance();
+  const { dateSystem } = useCalendar();
 
   // 1. Last 7 Days Spending Data for AreaChart
   const dailySpendData = useMemo(() => {
@@ -104,6 +106,40 @@ export default function Analytics() {
   const totalWeeklySpend = useMemo(() => {
     return dailySpendData.reduce((acc, item) => acc + item.amount, 0);
   }, [dailySpendData]);
+
+  // 5. Month-by-month income, expense, and savings review
+  const monthlyReview = useMemo(() => {
+    const monthlyTotals = {};
+
+    transactions.forEach((tx) => {
+      if (!tx.date || !/^\d{4}-\d{2}/.test(tx.date)) return;
+
+      const month = tx.date.slice(0, 7);
+      const amount = Number(tx.amount) || 0;
+      if (!monthlyTotals[month]) {
+        monthlyTotals[month] = { income: 0, expense: 0 };
+      }
+
+      if (tx.type === "income") {
+        monthlyTotals[month].income += amount;
+      } else if (tx.type === "expense") {
+        monthlyTotals[month].expense += amount;
+      }
+    });
+
+    return Object.entries(monthlyTotals)
+      .map(([month, totals]) => {
+        const savings = totals.income - totals.expense;
+        return {
+          month,
+          label: formatMonth(`${month}-01`, dateSystem),
+          ...totals,
+          savings,
+          savingsRate: totals.income > 0 ? Math.round((savings / totals.income) * 100) : 0
+        };
+      })
+      .sort((a, b) => b.month.localeCompare(a.month));
+  }, [transactions, dateSystem]);
 
   // General recommendation/AI insight mock
   const financialInsight = useMemo(() => {
@@ -204,7 +240,58 @@ export default function Analytics() {
         </div>
       </div>
 
-      {/* 2. Secondary Breakdown Grid */}
+      {/* 2. Monthly Financial Review */}
+      <div className="finance-card overflow-hidden">
+        <div className="flex items-center justify-between border-b border-zinc-800/60 pb-3.5 mb-4">
+          <div>
+            <h4 className="text-xs font-bold text-white tracking-tight uppercase">Monthly Expense & Savings Review</h4>
+            <p className="text-xs text-zinc-500 font-medium mt-0.5">Review every month recorded in your ledger.</p>
+          </div>
+        </div>
+
+        {monthlyReview.length === 0 ? (
+          <div className="py-12 flex flex-col items-center justify-center text-center gap-1.5 text-zinc-600">
+            <Coins className="w-7 h-7" />
+            <p className="text-xs">Add transactions to see your monthly expense and savings review.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[620px] text-left border-collapse">
+              <thead>
+                <tr className="border-b border-zinc-800 text-[10px] uppercase font-bold text-zinc-500 tracking-wider">
+                  <th className="pb-3 pl-2">Month</th>
+                  <th className="pb-3 text-right">Income</th>
+                  <th className="pb-3 text-right">Expenses</th>
+                  <th className="pb-3 text-right">Savings</th>
+                  <th className="pb-3 text-right pr-2">Savings Rate</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-850/50 text-xs">
+                {monthlyReview.map((month) => {
+                  const isSaving = month.savings >= 0;
+                  return (
+                    <tr key={month.month} className="hover:bg-zinc-950/30 transition-colors">
+                      <td className="py-3.5 pl-2 font-bold text-zinc-200">{month.label}</td>
+                      <td className="py-3.5 text-right font-semibold text-emerald-400">{formatCurrency(month.income)}</td>
+                      <td className="py-3.5 text-right font-semibold text-rose-400">{formatCurrency(month.expense)}</td>
+                      <td className={`py-3.5 text-right font-bold ${isSaving ? "text-emerald-400" : "text-rose-400"}`}>
+                        {isSaving ? "+" : "-"}{formatCurrency(Math.abs(month.savings))}
+                      </td>
+                      <td className="py-3.5 text-right pr-2">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${isSaving ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"}`}>
+                          {month.savingsRate}%
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* 3. Secondary Breakdown Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Left Columns: Budget Thresholds */}
