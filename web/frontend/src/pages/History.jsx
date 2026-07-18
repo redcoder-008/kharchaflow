@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { useFinance } from "../context/FinanceContext";
 import { useCalendar } from "../context/CalendarContext";
-import { formatCurrency, formatDate, formatMonth } from "../utils/helpers";
-import { CATEGORIES } from "../utils/constants";
+import { formatCurrency, formatDate } from "../utils/helpers";
+import { CATEGORIES, PAYMENT_METHODS } from "../utils/constants";
 import { 
   Search, 
   Edit2, 
@@ -21,7 +21,11 @@ export default function History() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedMethod, setSelectedMethod] = useState("all");
-  const [selectedMonth, setSelectedMonth] = useState("all");
+  const [selectedType, setSelectedType] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [minAmount, setMinAmount] = useState("");
+  const [maxAmount, setMaxAmount] = useState("");
   
   // Modal State
   const [editingTx, setEditingTx] = useState(null);
@@ -30,32 +34,32 @@ export default function History() {
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
 
-  // Extract all unique months that have transactions for the filter dropdown
-  const uniqueMonths = useMemo(() => {
-    const months = new Set();
-    transactions.forEach((tx) => {
-      if (tx.date) {
-        months.add(tx.date.slice(0, 7)); // YYYY-MM
-      }
-    });
-    return Array.from(months).sort().reverse(); // Show latest months first
-  }, [transactions]);
-
   // Filter and Search logic
   const filteredTransactions = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+    const minimum = minAmount === "" ? null : Number(minAmount);
+    const maximum = maxAmount === "" ? null : Number(maxAmount);
+
     return transactions.filter((tx) => {
       const matchesSearch = 
-        (tx.notes && tx.notes.toLowerCase().includes(search.toLowerCase())) ||
-        (tx.category && tx.category.toLowerCase().includes(search.toLowerCase())) ||
-        (tx.provider && tx.provider.toLowerCase().includes(search.toLowerCase()));
+        !normalizedSearch ||
+        (tx.notes && tx.notes.toLowerCase().includes(normalizedSearch)) ||
+        (tx.category && tx.category.toLowerCase().includes(normalizedSearch)) ||
+        (tx.provider && tx.provider.toLowerCase().includes(normalizedSearch)) ||
+        (tx.paymentMethod && tx.paymentMethod.toLowerCase().includes(normalizedSearch));
       
       const matchesCategory = selectedCategory === "all" || tx.category === selectedCategory;
       const matchesMethod = selectedMethod === "all" || tx.paymentMethod === selectedMethod;
-      const matchesMonth = selectedMonth === "all" || tx.date.startsWith(selectedMonth);
+      const matchesType = selectedType === "all" || tx.type === selectedType;
+      const matchesStartDate = !startDate || (tx.date && tx.date >= startDate);
+      const matchesEndDate = !endDate || (tx.date && tx.date <= endDate);
+      const amount = Number(tx.amount);
+      const matchesMinAmount = minimum === null || (!Number.isNaN(minimum) && amount >= minimum);
+      const matchesMaxAmount = maximum === null || (!Number.isNaN(maximum) && amount <= maximum);
 
-      return matchesSearch && matchesCategory && matchesMethod && matchesMonth;
+      return matchesSearch && matchesCategory && matchesMethod && matchesType && matchesStartDate && matchesEndDate && matchesMinAmount && matchesMaxAmount;
     });
-  }, [transactions, search, selectedCategory, selectedMethod, selectedMonth]);
+  }, [transactions, search, selectedCategory, selectedMethod, selectedType, startDate, endDate, minAmount, maxAmount]);
 
   const handleEditTrigger = (tx) => {
     setEditingTx(tx);
@@ -70,13 +74,21 @@ export default function History() {
     setSearch("");
     setSelectedCategory("all");
     setSelectedMethod("all");
-    setSelectedMonth("all");
+    setSelectedType("all");
+    setStartDate("");
+    setEndDate("");
+    setMinAmount("");
+    setMaxAmount("");
   };
 
   const hasActiveFilters = 
     selectedCategory !== "all" || 
     selectedMethod !== "all" || 
-    selectedMonth !== "all" ||
+    selectedType !== "all" ||
+    startDate !== "" ||
+    endDate !== "" ||
+    minAmount !== "" ||
+    maxAmount !== "" ||
     search !== "";
 
   return (
@@ -108,7 +120,31 @@ export default function History() {
         </div>
 
         {/* Filters Row */}
-        <div className={`grid grid-cols-1 md:grid-cols-4 gap-3 ${showFiltersMobile ? "block" : "hidden md:grid"}`}>
+        <div className={`grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 ${showFiltersMobile ? "grid" : "hidden md:grid"}`}>
+          {/* Date Range Filters */}
+          <div>
+            <label htmlFor="start-date-filter" className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-1.5 ml-0.5">From Date</label>
+            <input
+              id="start-date-filter"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              max={endDate || undefined}
+              className="finance-input py-2.5 text-xs font-semibold"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="end-date-filter" className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-1.5 ml-0.5">To Date</label>
+            <input
+              id="end-date-filter"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              min={startDate || undefined}
+              className="finance-input py-2.5 text-xs font-semibold"
+            />
+          </div>
           
           {/* Category Filter */}
           <div>
@@ -136,29 +172,56 @@ export default function History() {
               className="finance-input py-2.5 text-xs font-semibold"
             >
               <option value="all">All Sources</option>
-              <option value="Cash">Cash</option>
-              <option value="Bank Account">Bank Account</option>
-              <option value="eWallet">eWallet</option>
-              <option value="Mobile Banking">Mobile Banking</option>
-              <option value="Credit Card">Credit Card</option>
+              {Object.keys(PAYMENT_METHODS).map((method) => (
+                <option key={method} value={method}>{method}</option>
+              ))}
             </select>
           </div>
 
-          {/* Month Filter */}
+          {/* Transaction Type Filter */}
           <div>
-            <label htmlFor="month-filter" className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-1.5 ml-0.5">Billing Month</label>
+            <label htmlFor="type-filter" className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-1.5 ml-0.5">Transaction Type</label>
             <select
-              id="month-filter"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
+              id="type-filter"
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
               className="finance-input py-2.5 text-xs font-semibold"
             >
-              <option value="all">All Months</option>
-              {uniqueMonths.map((m) => {
-                const label = formatMonth(`${m}-01`, dateSystem);
-                return <option key={m} value={m}>{label}</option>;
-              })}
+              <option value="all">All Types</option>
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
             </select>
+          </div>
+
+          {/* Amount Range Filters */}
+          <div>
+            <label htmlFor="min-amount-filter" className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-1.5 ml-0.5">Minimum Amount</label>
+            <input
+              id="min-amount-filter"
+              type="number"
+              min="0"
+              step="any"
+              inputMode="decimal"
+              placeholder="No minimum"
+              value={minAmount}
+              onChange={(e) => setMinAmount(e.target.value)}
+              className="finance-input py-2.5 text-xs font-semibold"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="max-amount-filter" className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-1.5 ml-0.5">Maximum Amount</label>
+            <input
+              id="max-amount-filter"
+              type="number"
+              min="0"
+              step="any"
+              inputMode="decimal"
+              placeholder="No maximum"
+              value={maxAmount}
+              onChange={(e) => setMaxAmount(e.target.value)}
+              className="finance-input py-2.5 text-xs font-semibold"
+            />
           </div>
 
           {/* Reset Filters */}
