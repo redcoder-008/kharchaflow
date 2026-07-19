@@ -6,6 +6,7 @@ import {
   ShieldAlert,
   LogOut,
   TrendingUp,
+  Target,
   Cloud,
   UserCheck
 } from "lucide-react";
@@ -19,6 +20,7 @@ export default function Sidebar({ activePage, setActivePage }) {
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "history", label: "History", icon: Receipt },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
+    { id: "goals", label: "Financial Goals", icon: Target },
     { id: "settings", label: "Settings", icon: Settings },
     ...(user?.isAdmin ? [
       { id: "admin", label: "Admin", icon: ShieldAlert }

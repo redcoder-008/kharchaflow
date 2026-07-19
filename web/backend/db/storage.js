@@ -19,6 +19,8 @@ const DEFAULT_PROFILE = {
   dateSystem: "gregorian"
 };
 
+const DEFAULT_FINANCIAL_GOALS = [];
+
 // Initial state of balances mapped to payment methods (all default to zero)
 const DEFAULT_INITIAL_BALANCES = {
   "Cash": 0.00,
@@ -72,6 +74,19 @@ export const localDB = {
 
   saveBudgets: (budgets) => {
     localStorage.setItem("kharchaflow_budgets", JSON.stringify(budgets));
+  },
+
+  getFinancialGoals: () => {
+    const goals = localStorage.getItem("kharchaflow_financial_goals");
+    if (!goals) {
+      localStorage.setItem("kharchaflow_financial_goals", JSON.stringify(DEFAULT_FINANCIAL_GOALS));
+      return DEFAULT_FINANCIAL_GOALS;
+    }
+    return JSON.parse(goals);
+  },
+
+  saveFinancialGoals: (goals) => {
+    localStorage.setItem("kharchaflow_financial_goals", JSON.stringify(goals));
   },
 
   getInitialBalances: () => {
@@ -130,6 +145,7 @@ export const localDB = {
   resetAllData: () => {
     localStorage.removeItem("kharchaflow_transactions");
     localStorage.removeItem("kharchaflow_budgets");
+    localStorage.removeItem("kharchaflow_financial_goals");
     localStorage.removeItem("kharchaflow_initial_balances");
     localStorage.removeItem("kharchaflow_profile");
   },

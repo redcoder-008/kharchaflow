@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import History from "./pages/History";
 import Analytics from "./pages/Analytics";
+import Goals from "./pages/Goals";
 import Settings from "./pages/Settings";
 import Admin from "./pages/Admin";
 import AddTransactionModal from "./components/transactions/AddTransactionModal";
@@ -123,6 +124,8 @@ function AppContent() {
         return <History />;
       case "analytics":
         return <Analytics />;
+      case "goals":
+        return <Goals />;
       case "settings":
         return <Settings />;
       case "admin":

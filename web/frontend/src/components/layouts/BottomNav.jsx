@@ -2,6 +2,7 @@ import {
   LayoutDashboard, 
   Receipt, 
   BarChart3, 
+  Target,
   Settings,
   ShieldAlert,
   Plus
@@ -16,6 +17,7 @@ export default function BottomNav({ activePage, setActivePage, onQuickAddClick }
     { id: "history", label: "History", icon: Receipt },
     { id: "placeholder", label: "", icon: null }, // Spacer for FAB
     { id: "analytics", label: "Analytics", icon: BarChart3 },
+    { id: "goals", label: "Goals", icon: Target },
     { id: "settings", label: "Settings", icon: Settings },
     ...(user?.isAdmin ? [
       { id: "admin", label: "Admin", icon: ShieldAlert }

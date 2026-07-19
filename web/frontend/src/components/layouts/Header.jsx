@@ -20,6 +20,8 @@ export default function Header({ activePage, setActivePage }) {
         return "Transaction History";
       case "analytics":
         return "Insights & Analytics";
+      case "goals":
+        return "Financial Goals";
       case "settings":
         return "App Settings";
       case "admin":

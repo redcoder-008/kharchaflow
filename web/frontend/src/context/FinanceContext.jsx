@@ -25,6 +25,7 @@ export function FinanceProvider({ children }) {
   
   const [transactions, setTransactions] = useState([]);
   const [budgets, setBudgets] = useState({});
+  const [financialGoals, setFinancialGoals] = useState([]);
   const [initialBalances, setInitialBalances] = useState({});
   const [loading, setLoading] = useState(true);
 
@@ -56,6 +57,7 @@ export function FinanceProvider({ children }) {
       // LocalStorage Demo Mode Data Sync
       setTransactions(localDB.getTransactions());
       setBudgets(localDB.getBudgets());
+      setFinancialGoals(localDB.getFinancialGoals());
       setInitialBalances(localDB.getInitialBalances());
       setLoading(false);
       return;
@@ -64,6 +66,7 @@ export function FinanceProvider({ children }) {
     if (!user) {
       setTransactions([]);
       setBudgets({});
+      setFinancialGoals([]);
       setInitialBalances({});
       setLoading(false);
       return;
@@ -72,6 +75,7 @@ export function FinanceProvider({ children }) {
     // Clear state before live sync to prevent data leakage from previous users
     setTransactions([]);
     setBudgets({});
+    setFinancialGoals([]);
     setInitialBalances({});
 
     // Live Firebase Firestore Sync
@@ -105,6 +109,7 @@ export function FinanceProvider({ children }) {
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (data.budgets) setBudgets(data.budgets);
+        if (data.financialGoals) setFinancialGoals(data.financialGoals);
         if (data.initialBalances) setInitialBalances(data.initialBalances);
       } else {
         // Fallback: Seed unified document
@@ -112,7 +117,8 @@ export function FinanceProvider({ children }) {
         const defaultBalances = localDB.getDefaultInitialBalances();
         setDoc(userDocRef, {
           budgets: defaultBudgets,
-          initialBalances: defaultBalances
+          initialBalances: defaultBalances,
+          financialGoals: []
         }, { merge: true });
         setBudgets(defaultBudgets);
         setInitialBalances(defaultBalances);
@@ -262,6 +268,24 @@ export function FinanceProvider({ children }) {
     }
   };
 
+  const saveFinancialGoals = async (goals) => {
+    if (isDemoMode || !user) {
+      setFinancialGoals(goals);
+      localDB.saveFinancialGoals(goals);
+      return true;
+    }
+
+    setFinancialGoals(goals);
+    try {
+      const userDocRef = doc(db, "users", user.uid);
+      await setDoc(userDocRef, { financialGoals: goals }, { merge: true });
+      return true;
+    } catch (error) {
+      console.error("Save financial goals error:", error);
+      throw error;
+    }
+  };
+
   // Guaranteed global chronological sorting
   const sortedTransactions = useMemo(() => {
     return [...transactions].sort((a, b) => {
@@ -349,6 +373,7 @@ export function FinanceProvider({ children }) {
   const value = {
     transactions: sortedTransactions,
     budgets,
+    financialGoals,
     initialBalances,
     currentBalances,
     totals,
@@ -358,6 +383,7 @@ export function FinanceProvider({ children }) {
     editTransaction,
     deleteTransaction,
     updateBudgets,
+    saveFinancialGoals,
     updateInitialBalance
   };
 
