@@ -111,8 +111,25 @@ export default function Admin() {
       const allTx = Object.values(txByUser).flat();
       allTx.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
-      const totalIncome = allTx.filter(t => t.type === "income").reduce((s, t) => s + Number(t.amount || 0), 0);
-      const totalExpense = allTx.filter(t => t.type === "expense").reduce((s, t) => s + Number(t.amount || 0), 0);
+      const userLookup = new Map(
+        latestUsers.map((u) => [u.uid, {
+          name: u.displayName || u.email || "Unknown User",
+          email: u.email || ""
+        }])
+      );
+
+      const enrichedTx = allTx.map((tx) => {
+        const userInfo = userLookup.get(tx.uid) || { name: "Unknown User", email: "" };
+        return {
+          ...tx,
+          userName: userInfo.name,
+          userEmail: userInfo.email,
+          description: tx.notes || tx.description || tx.title || "No note provided"
+        };
+      });
+
+      const totalIncome = enrichedTx.filter(t => t.type === "income").reduce((s, t) => s + Number(t.amount || 0), 0);
+      const totalExpense = enrichedTx.filter(t => t.type === "expense").reduce((s, t) => s + Number(t.amount || 0), 0);
 
       const activeUids = new Set(allTx.map(t => t.uid).filter(Boolean));
 
@@ -125,13 +142,13 @@ export default function Admin() {
       }).length;
 
       const last30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      const recentTxList = allTx.filter(t => {
+      const recentTxList = enrichedTx.filter(t => {
         const d = t.date ? new Date(t.date) : null;
         return d && d >= last30;
       });
 
       const catMap = {};
-      allTx.filter(t => t.type === "expense").forEach(t => {
+      enrichedTx.filter(t => t.type === "expense").forEach(t => {
         catMap[t.category] = (catMap[t.category] || 0) + Number(t.amount || 0);
       });
       const categoryData = Object.entries(catMap)
@@ -153,7 +170,7 @@ export default function Admin() {
         const key = d.toISOString().slice(0, 7);
         monthlyMap[key] = { month: key, income: 0, expense: 0 };
       }
-      allTx.forEach(t => {
+      enrichedTx.forEach(t => {
         const d = t.date ? new Date(t.date) : null;
         if (!d) return;
         const key = d.toISOString().slice(0, 7);
@@ -187,7 +204,7 @@ export default function Admin() {
         totalUsers: latestUsers.length,
         activeUsers: activeUids.size,
         newUsersMonth,
-        totalTx: allTx.length,
+        totalTx: enrichedTx.length,
         totalIncome,
         totalExpense,
         totalSavings: totalIncome - totalExpense,
@@ -199,7 +216,7 @@ export default function Admin() {
         userGrowth,
       });
       setUsers(latestUsers);
-      setRecentTx(allTx.slice(0, 20));
+      setRecentTx(enrichedTx.slice(0, 20));
       setLoading(false);
       setRefreshing(false);
     };
@@ -432,6 +449,7 @@ export default function Admin() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-zinc-800">
+                      <th className="pb-2 text-left text-xs text-zinc-500 font-semibold uppercase tracking-wider">User</th>
                       <th className="pb-2 text-left text-xs text-zinc-500 font-semibold uppercase tracking-wider">Description</th>
                       <th className="pb-2 text-left text-xs text-zinc-500 font-semibold uppercase tracking-wider">Category</th>
                       <th className="pb-2 text-left text-xs text-zinc-500 font-semibold uppercase tracking-wider">Method</th>
@@ -442,7 +460,15 @@ export default function Admin() {
                   <tbody className="divide-y divide-zinc-800/50">
                     {recentTx.map((tx) => (
                       <tr key={tx.id} className="hover:bg-zinc-800/30 transition-colors">
-                        <td className="py-2.5 text-zinc-200 font-medium">{tx.description || "—"}</td>
+                        <td className="py-2.5 text-zinc-200 font-medium">
+                          <div className="flex flex-col">
+                            <span>{tx.userName || "Unknown User"}</span>
+                            {tx.userEmail ? <span className="text-[10px] text-zinc-500">{tx.userEmail}</span> : null}
+                          </div>
+                        </td>
+                        <td className="py-2.5 text-zinc-200 font-medium max-w-[240px]">
+                          <div className="line-clamp-2">{tx.description || "—"}</div>
+                        </td>
                         <td className="py-2.5 text-zinc-400 text-xs">{tx.category || "—"}</td>
                         <td className="py-2.5 text-zinc-400 text-xs">{tx.paymentMethod || "—"}</td>
                         <td className={`py-2.5 text-right font-bold text-xs ${tx.type === "income" ? "text-emerald-400" : "text-rose-400"}`}>
@@ -594,7 +620,7 @@ export default function Admin() {
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-zinc-800 bg-zinc-900/60">
-                    {["Type", "Description", "Category", "Method", "Amount", "Date"].map(h => (
+                    {["Type", "User", "Description", "Category", "Method", "Amount", "Date"].map(h => (
                       <th key={h} className="p-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">{h}</th>
                     ))}
                   </tr>
@@ -607,7 +633,15 @@ export default function Admin() {
                           {tx.type}
                         </span>
                       </td>
-                      <td className="p-4 text-sm text-zinc-200 font-medium">{tx.description || "—"}</td>
+                      <td className="p-4 text-sm text-zinc-200 font-medium">
+                        <div className="flex flex-col">
+                          <span>{tx.userName || "Unknown User"}</span>
+                          {tx.userEmail ? <span className="text-[10px] text-zinc-500">{tx.userEmail}</span> : null}
+                        </div>
+                      </td>
+                      <td className="p-4 text-sm text-zinc-200 font-medium max-w-[260px]">
+                        <div className="line-clamp-2">{tx.description || "—"}</div>
+                      </td>
                       <td className="p-4 text-xs text-zinc-400">{tx.category || "—"}</td>
                       <td className="p-4 text-xs text-zinc-400">{tx.paymentMethod || "—"}</td>
                       <td className={`p-4 text-sm font-bold ${tx.type === "income" ? "text-emerald-400" : "text-rose-400"}`}>
