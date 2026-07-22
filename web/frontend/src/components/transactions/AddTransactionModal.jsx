@@ -63,7 +63,16 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
     if (dateSystem === "nepali") {
       setNepaliDate(toNepaliDateInput(date));
     }
-  }, [dateSystem, date]);
+    
+    // Cleanup any orphaned portal calendars to prevent "two calendars appearing" bug
+    return () => {
+      document.querySelectorAll('.react-datepicker-popper, .calender').forEach(el => {
+        if (el.parentNode === document.body || el.closest('.nepali-date-picker') || el.classList.contains('react-datepicker-popper')) {
+           el.remove();
+        }
+      });
+    };
+  }, [dateSystem, date, isOpen]);
 
   // Adjust provider and category defaults when payment method or type changes
   useEffect(() => {
@@ -295,9 +304,9 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
           {/* 3. Transaction Date */}
           <div>
             <label htmlFor="date" className="finance-label">Transaction Date {dateSystem === "nepali" ? "(Bikram Sambat)" : ""}</label>
-            <div className="relative" key={`date-picker-${dateSystem}`}>
+            <div className="relative">
               {dateSystem === "nepali" ? (
-                <div className="w-full relative z-50">
+                <div key="nepali-picker" className="w-full relative z-50">
                   <NepaliDatePicker
                     inputClassName="finance-input pl-10 w-full"
                     className="w-full"
@@ -307,18 +316,20 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
                   />
                 </div>
               ) : (
-                <DatePicker
-                  id="date"
-                  selected={date ? new Date(date) : null}
-                  onChange={(d) => setDate(d ? format(d, "yyyy-MM-dd") : "")}
-                  dateFormat="MMM d, yyyy"
-                  required
-                  className="finance-input pl-10 w-full"
-                  wrapperClassName="w-full"
-                  popperPlacement="bottom-start"
-                />
+                <div key="gregorian-picker" className="w-full relative z-50">
+                  <DatePicker
+                    id="date"
+                    selected={date ? new Date(date) : null}
+                    onChange={(d) => setDate(d ? format(d, "yyyy-MM-dd") : "")}
+                    dateFormat="MMM d, yyyy"
+                    required
+                    className="finance-input pl-10 w-full"
+                    wrapperClassName="w-full"
+                    popperPlacement="bottom-start"
+                  />
+                </div>
               )}
-              <Calendar className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-zinc-500 pointer-events-none" />
+              <Calendar className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-zinc-500 pointer-events-none z-50" />
             </div>
             {dateSystem === "nepali" && <p className="mt-1.5 text-[10px] text-zinc-500">Enter the Nepali date as YYYY-MM-DD.</p>}
           </div>
