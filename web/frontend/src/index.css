@@ -210,28 +210,119 @@ input[type=number] {
 }
 
 /* ── React DatePicker Theme Overrides ─────────────────────────────── */
+.react-datepicker-popper {
+  z-index: 99999 !important;
+}
+
+.transaction-datepicker-popper {
+  backdrop-filter: blur(10px) saturate(140%) !important;
+}
+
 .react-datepicker {
-  @apply bg-white border-zinc-200 font-sans text-zinc-900 shadow-xl dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-100 !important;
-  font-size: 11px !important;
-  border-radius: 12px !important;
-  padding: 4px !important;
+  background: #ffffff !important;
+  border: 1px solid #e4e4e7 !important;
+  color: #18181b !important;
+  font-family: inherit !important;
+  font-size: 12px !important;
+  border-radius: 16px !important;
+  padding: 6px !important;
+  overflow: hidden !important;
+  box-shadow: 0 25px 60px -20px rgba(0, 0, 0, 0.45) !important;
+}
+
+.dark .react-datepicker {
+  background: #18181b !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+.transaction-datepicker-calendar {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border: 1px solid rgba(228, 228, 231, 0.95) !important;
+  color: #18181b !important;
+  border-radius: 16px !important;
+  box-shadow: 0 25px 60px -20px rgba(0, 0, 0, 0.45) !important;
+}
+
+.dark .transaction-datepicker-calendar {
+  background: rgba(24, 24, 27, 0.96) !important;
+  border-color: rgba(39, 39, 42, 0.95) !important;
+  color: #f4f4f5 !important;
 }
 
 .react-datepicker__header {
-  @apply bg-zinc-50 border-b border-zinc-200 pt-3 dark:bg-zinc-950 dark:border-zinc-800 !important;
-  border-top-left-radius: 12px !important;
-  border-top-right-radius: 12px !important;
+  background: #fafafa !important;
+  border-bottom: 1px solid #e4e4e7 !important;
+  border-top-left-radius: 16px !important;
+  border-top-right-radius: 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.5rem !important;
+  padding: 0.75rem !important;
+  position: relative !important;
 }
 
-.react-datepicker__current-month, .react-datepicker-time__header, .react-datepicker-year-header {
-  @apply text-zinc-900 font-semibold dark:text-zinc-100 !important;
+.dark .react-datepicker__header {
+  background: #09090b !important;
+  border-bottom-color: #27272a !important;
 }
 
-.react-datepicker__day-name, .react-datepicker__day, .react-datepicker__time-name {
-  @apply text-zinc-500 dark:text-zinc-400 !important;
-  width: 24px !important;
-  height: 24px !important;
-  line-height: 24px !important;
+.react-datepicker__current-month, .react-datepicker-time__header, .react-datepicker-year-header,
+.react-datepicker__header .react-datepicker__navigation {
+  color: #18181b !important;
+  @apply dark:text-zinc-100 !important;
+  font-weight: 600 !important;
+}
+
+.react-datepicker__current-month {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 1 !important;
+  text-align: center !important;
+  margin: 0 auto !important;
+}
+
+.react-datepicker__navigation {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 1.75rem !important;
+  height: 1.75rem !important;
+  flex-shrink: 0 !important;
+}
+
+.react-datepicker__navigation--previous {
+  order: 1 !important;
+  margin-right: auto !important;
+}
+
+.react-datepicker__navigation--next {
+  order: 3 !important;
+  margin-left: auto !important;
+}
+
+.react-datepicker__header .react-datepicker__navigation-icon::before {
+  border-color: #18181b !important;
+  @apply dark:border-zinc-100 !important;
+}
+
+.react-datepicker__day-name, .react-datepicker__day, .react-datepicker__time-name,
+.react-datepicker__current-month,
+.react-datepicker__header .react-datepicker__month-dropdown-container,
+.react-datepicker__header .react-datepicker__year-dropdown-container,
+.react-datepicker__month-text,
+.react-datepicker__year-text {
+  color: #18181b !important;
+  @apply dark:text-zinc-100 !important;
+  width: 2.1rem !important;
+  height: 2.1rem !important;
+  line-height: 2.1rem !important;
   margin: 1px !important;
 }
 
@@ -267,14 +358,15 @@ input[type=number] {
 }
 
 .nepali-date-picker .calender {
-  @apply border border-zinc-200 text-zinc-900 shadow-xl dark:border-zinc-800 dark:text-zinc-100 !important;
+  @apply border border-zinc-200 text-zinc-900 shadow-2xl dark:border-zinc-800 dark:text-zinc-100 !important;
   background-color: #ffffff !important;
   font-family: inherit !important;
-  font-size: 11px !important;
-  border-radius: 12px !important;
-  padding: 4px !important;
-  width: max-content !important;
-  min-width: unset !important;
+  font-size: 12px !important;
+  border-radius: 16px !important;
+  padding: 8px !important;
+  width: min(320px, calc(100vw - 2rem)) !important;
+  max-width: 100% !important;
+  min-width: 280px !important;
   top: calc(100% + 8px) !important;
   bottom: auto !important;
   left: 0 !important;
@@ -319,24 +411,36 @@ input[type=number] {
 
 .nepali-date-picker .calender .calendar-controller {
   @apply flex justify-between items-center !important;
-  background-color: #fafafa !important; /* zinc-50 */
+  background-color: #fafafa !important;
   margin: -4px -4px 0 -4px !important;
-  padding: 12px 8px 30px 8px !important;
-  border-top-left-radius: 12px !important;
-  border-top-right-radius: 12px !important;
-  border-bottom: 1px solid #e4e4e7 !important; /* zinc-200 */
-}
-.dark .nepali-date-picker .calender .calendar-controller {
-  background-color: #09090b !important; /* zinc-950 */
-  border-bottom: 1px solid #27272a !important; /* zinc-800 */
+  padding: 12px 8px 16px 8px !important;
+  border-top-left-radius: 16px !important;
+  border-top-right-radius: 16px !important;
+  border-bottom: 1px solid #e4e4e7 !important;
 }
 
+.dark .nepali-date-picker .calender .calendar-controller {
+  background-color: #09090b !important;
+  border-bottom: 1px solid #27272a !important;
+}
+
+.nepali-date-picker .calender .calendar-controller .current-month,
+.nepali-date-picker .calender .calendar-controller .current-year,
 .nepali-date-picker .calender .calendar-controller .control.month,
-.nepali-date-picker .calender .calendar-controller .control.year {
-  @apply bg-transparent text-zinc-900 font-semibold border-none rounded-md dark:text-zinc-100 !important;
-  font-size: 12px !important;
-  padding: 2px 2px !important;
-  pointer-events: none !important;
+.nepali-date-picker .calender .calendar-controller .control.year,
+.nepali-date-picker .calender .calendar-controller .control.prev-month,
+.nepali-date-picker .calender .calendar-controller .control.next-month {
+  color: #18181b !important;
+  @apply dark:text-zinc-100 !important;
+  font-weight: 600 !important;
+  display: inline-block !important;
+  white-space: nowrap !important;
+}
+
+.nepali-date-picker .calender .calendar-controller .control.prev-month,
+.nepali-date-picker .calender .calendar-controller .control.next-month {
+  color: #27272a !important;
+  @apply dark:text-zinc-100 !important;
 }
 
 .nepali-date-picker .calender .calendar-controller .control .drop-down {
@@ -351,16 +455,48 @@ input[type=number] {
   @apply bg-emerald-500 text-white font-bold dark:text-zinc-950 !important;
 }
 
+.nepali-date-picker .calender .month-day,
+.nepali-date-picker .calender td.month-day {
+  color: #27272a !important;
+  @apply dark:text-zinc-300 !important;
+  width: 2.1rem !important;
+  height: 2.1rem !important;
+  line-height: 2.1rem !important;
+  margin: 1px !important;
+  border-radius: 9999px !important;
+}
+
+.nepali-date-picker .calender .month-day.selected {
+  @apply bg-emerald-500 text-white !important;
+}
+
+.nepali-date-picker .calender .month-day.today {
+  @apply border border-emerald-500/50 text-emerald-600 dark:text-emerald-400 !important;
+}
+
+.nepali-date-picker .calender .month-day:hover {
+  @apply bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 !important;
+}
+
+.nepali-date-picker .calender .calendar-wrapper {
+  width: 100% !important;
+}
+
+.nepali-date-picker .calender .date-indicator {
+  @apply text-zinc-500 dark:text-zinc-400 !important;
+}
+
 .nepali-date-picker .calender table {
   border-collapse: separate !important;
   border-spacing: 2px !important;
-  margin: -26px auto 4px auto !important;
+  margin: 8px auto 4px auto !important;
   position: relative;
   z-index: 10;
 }
 
 .nepali-date-picker .calender table th {
-  @apply text-zinc-500 font-normal dark:text-zinc-400 !important;
+  color: #3f3f46 !important;
+  @apply dark:text-zinc-400 !important;
   font-size: 10px !important;
   width: 24px !important;
   height: 24px !important;

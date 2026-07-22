@@ -206,7 +206,7 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
 
       {/* Main Drawer Shell */}
       <div
-        className="w-full md:max-w-xl bg-zinc-900 border border-zinc-800 md:rounded-3xl rounded-t-3xl shadow-2xl relative z-10 flex flex-col animate-slide-up md:animate-none overflow-hidden"
+        className="w-full md:max-w-xl bg-zinc-900 border border-zinc-800 md:rounded-3xl rounded-t-3xl shadow-2xl relative z-10 flex flex-col animate-slide-up md:animate-none overflow-visible"
         style={{
           /* Mobile: cap to 90dvh so it shrinks with keyboard and never covers bottom nav */
           maxHeight: 'min(90dvh, calc(100dvh - env(safe-area-inset-bottom, 0px)))',
@@ -312,7 +312,7 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
                     className="w-full"
                     value={nepaliDate}
                     onChange={(value) => setNepaliDate(value)}
-                    options={{ calenderLocale: "en", valueLocale: "en" }}
+                    options={{ calenderLocale: "ne", valueLocale: "en" }}
                   />
                 </div>
               ) : (
@@ -326,6 +326,9 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
                     className="finance-input pl-10 w-full"
                     wrapperClassName="w-full"
                     popperPlacement="bottom-start"
+                    popperClassName="transaction-datepicker-popper"
+                    calendarClassName="transaction-datepicker-calendar"
+                    showPopperArrow={false}
                   />
                 </div>
               )}
