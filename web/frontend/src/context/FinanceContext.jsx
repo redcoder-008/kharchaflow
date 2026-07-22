@@ -28,6 +28,7 @@ export function FinanceProvider({ children }) {
   const [financialGoals, setFinancialGoals] = useState([]);
   const [initialBalances, setInitialBalances] = useState({});
   const [bankAccounts, setBankAccounts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Sync status state
@@ -61,6 +62,7 @@ export function FinanceProvider({ children }) {
       setFinancialGoals(localDB.getFinancialGoals());
       setInitialBalances(localDB.getInitialBalances());
       setBankAccounts(localDB.getBankAccounts());
+      setCategories(localDB.getCustomCategories());
       setLoading(false);
       return;
     }
@@ -80,6 +82,7 @@ export function FinanceProvider({ children }) {
     setFinancialGoals([]);
     setInitialBalances({});
     setBankAccounts([]);
+    setCategories([]);
 
     // Live Firebase Firestore Sync
     if (!db) {
@@ -115,20 +118,24 @@ export function FinanceProvider({ children }) {
         if (data.financialGoals) setFinancialGoals(data.financialGoals);
         if (data.initialBalances) setInitialBalances(data.initialBalances);
         setBankAccounts(Array.isArray(data.bankAccounts) ? data.bankAccounts : localDB.getBankAccounts());
+        setCategories(Array.isArray(data.categories) ? data.categories : localDB.getCustomCategories());
       } else {
         // Fallback: Seed unified document
         const defaultBudgets = localDB.getDefaultBudgets();
         const defaultBalances = localDB.getDefaultInitialBalances();
         const initialBankAccounts = localDB.getBankAccounts();
+        const initialCategories = localDB.getCustomCategories();
         setDoc(userDocRef, {
           budgets: defaultBudgets,
           initialBalances: defaultBalances,
           financialGoals: [],
-          bankAccounts: initialBankAccounts
+          bankAccounts: initialBankAccounts,
+          categories: initialCategories
         }, { merge: true });
         setBudgets(defaultBudgets);
         setInitialBalances(defaultBalances);
         setBankAccounts(initialBankAccounts);
+        setCategories(initialCategories);
       }
       setPendingUser(docSnap.metadata.hasPendingWrites);
       setLoading(false);
@@ -420,6 +427,89 @@ export function FinanceProvider({ children }) {
     }
   };
 
+  const addCategory = async (categoryName) => {
+    const normalizedName = categoryName.trim();
+    if (!normalizedName) throw new Error("Category name is required.");
+
+    const safeName = normalizedName.replace(/\s+/g, " ");
+    const isDuplicate = categories.some((category) => category.name.toLowerCase() === safeName.toLowerCase());
+    if (isDuplicate) throw new Error("This category already exists.");
+
+    const nextCategories = [{ id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name: safeName }, ...categories];
+
+    if (isDemoMode || !user) {
+      setCategories(nextCategories);
+      localDB.saveCustomCategories(nextCategories);
+      return true;
+    }
+
+    setCategories(nextCategories);
+
+    try {
+      const userDocRef = doc(db, "users", user.uid);
+      await setDoc(userDocRef, { categories: nextCategories }, { merge: true });
+      return true;
+    } catch (error) {
+      console.error("Add category error:", error);
+      throw error;
+    }
+  };
+
+  const updateCategory = async (id, categoryName) => {
+    const normalizedName = categoryName.trim();
+    if (!normalizedName) throw new Error("Category name is required.");
+
+    const existingCategory = categories.find((category) => category.id === id);
+    if (!existingCategory) throw new Error("Category not found.");
+
+    const safeName = normalizedName.replace(/\s+/g, " ");
+    const isDuplicate = categories.some((category) => category.id !== id && category.name.toLowerCase() === safeName.toLowerCase());
+    if (isDuplicate) throw new Error("This category already exists.");
+
+    const nextCategories = categories.map((category) => category.id === id ? { ...category, name: safeName } : category);
+
+    if (isDemoMode || !user) {
+      setCategories(nextCategories);
+      localDB.saveCustomCategories(nextCategories);
+      return true;
+    }
+
+    setCategories(nextCategories);
+
+    try {
+      const userDocRef = doc(db, "users", user.uid);
+      await setDoc(userDocRef, { categories: nextCategories }, { merge: true });
+      return true;
+    } catch (error) {
+      console.error("Update category error:", error);
+      throw error;
+    }
+  };
+
+  const deleteCategory = async (id) => {
+    const existingCategory = categories.find((category) => category.id === id);
+    if (!existingCategory) return true;
+
+    const nextCategories = categories.filter((category) => category.id !== id);
+
+    if (isDemoMode || !user) {
+      setCategories(nextCategories);
+      localDB.saveCustomCategories(nextCategories);
+      return true;
+    }
+
+    setCategories(nextCategories);
+
+    try {
+      const userDocRef = doc(db, "users", user.uid);
+      await setDoc(userDocRef, { categories: nextCategories }, { merge: true });
+      return true;
+    } catch (error) {
+      console.error("Delete category error:", error);
+      throw error;
+    }
+  };
+
   // Guaranteed global chronological sorting
   const sortedTransactions = useMemo(() => {
     return [...transactions].sort((a, b) => {
@@ -514,6 +604,7 @@ export function FinanceProvider({ children }) {
     loading,
     syncStatus,
     bankAccounts,
+    categories,
     addTransaction,
     editTransaction,
     deleteTransaction,
@@ -522,7 +613,10 @@ export function FinanceProvider({ children }) {
     updateInitialBalance,
     addBankAccount,
     updateBankAccount,
-    deleteBankAccount
+    deleteBankAccount,
+    addCategory,
+    updateCategory,
+    deleteCategory
   };
 
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>;

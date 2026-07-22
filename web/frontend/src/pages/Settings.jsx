@@ -4,6 +4,7 @@ import { useFinance } from "../context/FinanceContext";
 import { useCalendar } from "../context/CalendarContext";
 import { db, reloadFirebaseApp } from "../../../backend/db/firebase";
 import { localDB } from "../../../backend/db/storage";
+import { CATEGORIES } from "../utils/constants";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { 
   User, 
@@ -25,12 +26,13 @@ import {
   Landmark,
   Plus,
   Pencil,
-  DollarSign
+  DollarSign,
+  Tag
 } from "lucide-react";
 
 export default function Settings() {
   const { user, isDemoMode, logout, updateUserProfile, updateUserPassword, deleteUserAccount } = useAuth();
-  const { budgets, updateBudgets, bankAccounts, addBankAccount, updateBankAccount, deleteBankAccount } = useFinance();
+  const { budgets, updateBudgets, bankAccounts, addBankAccount, updateBankAccount, deleteBankAccount, categories, addCategory, updateCategory, deleteCategory } = useFinance();
   const { dateSystem, setDateSystem } = useCalendar();
   const [dateSystemSaving, setDateSystemSaving] = useState(false);
   const [currencySaving, setCurrencySaving] = useState(false);
@@ -60,6 +62,11 @@ export default function Settings() {
   const [bankAccountName, setBankAccountName] = useState("");
   const [editingBankAccountId, setEditingBankAccountId] = useState(null);
   const [bankAccountError, setBankAccountError] = useState("");
+  const [categoryName, setCategoryName] = useState("");
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
+  const [categoryError, setCategoryError] = useState("");
+  const [categorySuccess, setCategorySuccess] = useState("");
+  const [categorySaving, setCategorySaving] = useState(false);
   const [bankAccountSuccess, setBankAccountSuccess] = useState("");
   const [bankAccountSaving, setBankAccountSaving] = useState(false);
 
@@ -373,6 +380,60 @@ export default function Settings() {
     } catch (err) {
       console.error("Delete bank account error:", err);
       setBankAccountError("Unable to delete bank account.");
+    }
+  };
+
+  const resetCategoryForm = () => {
+    setCategoryName("");
+    setEditingCategoryId(null);
+    setCategoryError("");
+  };
+
+  const handleCategorySubmit = async (e) => {
+    e.preventDefault();
+    setCategoryError("");
+    setCategorySuccess("");
+
+    const trimmedName = categoryName.trim();
+    if (!trimmedName) {
+      setCategoryError("Please enter a category name.");
+      return;
+    }
+
+    setCategorySaving(true);
+    try {
+      if (editingCategoryId) {
+        await updateCategory(editingCategoryId, trimmedName);
+        setCategorySuccess("Category updated.");
+      } else {
+        await addCategory(trimmedName);
+        setCategorySuccess("Category added.");
+      }
+      resetCategoryForm();
+    } catch (err) {
+      console.error("Category save error:", err);
+      setCategoryError(err.message || "Unable to save category.");
+    } finally {
+      setCategorySaving(false);
+    }
+  };
+
+  const handleEditCategory = (category) => {
+    setEditingCategoryId(category.id);
+    setCategoryName(category.name);
+    setCategoryError("");
+    setCategorySuccess("");
+  };
+
+  const handleDeleteCategory = async (id) => {
+    if (!confirm("Delete this custom category from your list?")) return;
+    try {
+      await deleteCategory(id);
+      if (editingCategoryId === id) resetCategoryForm();
+      setCategorySuccess("Category removed.");
+    } catch (err) {
+      console.error("Delete category error:", err);
+      setCategoryError("Unable to delete category.");
     }
   };
 

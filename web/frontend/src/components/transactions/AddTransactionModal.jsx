@@ -17,7 +17,7 @@ import "nepali-datepicker-reactjs/dist/index.css";
 import { format } from "date-fns";
 
 export default function AddTransactionModal({ isOpen, onClose, editingTransaction, setActivePage, defaultType }) {
-  const { addTransaction, editTransaction, currentBalances, bankAccounts } = useFinance();
+  const { addTransaction, editTransaction, currentBalances, bankAccounts, categories } = useFinance();
   const { dateSystem } = useCalendar();
   
   // Form state fields
@@ -132,6 +132,7 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
   const availableBalance = getAvailableBalance();
   const numericAmount = Number(amount || 0);
   const bankAccountOptions = bankAccounts.length > 0 ? bankAccounts : [];
+  const categoryOptions = [...new Set([...(Object.keys(CATEGORIES).filter((name) => name !== "Income")), ...(categories || []).map((category) => category.name), category, editingTransaction?.category].filter(Boolean))];
   const resultingBalance = type === "expense" 
     ? availableBalance - numericAmount 
     : availableBalance + numericAmount;
@@ -339,34 +340,32 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
             {dateSystem === "nepali" && <p className="mt-1.5 text-[10px] text-zinc-500">Enter the Nepali date as YYYY-MM-DD.</p>}
           </div>
 
-          {/* 4. Category Selector (Only for expenses, locked as Income for Income type) */}
-          {type === "expense" && (
-            <div>
-              <label className="finance-label">Category</label>
-              <div className="grid grid-cols-4 gap-2">
-                {Object.values(CATEGORIES).map((cat) => {
-                  if (cat.name === "Income") return null;
-                  const Icon = cat.icon;
-                  const isSelected = category === cat.name;
-                  return (
-                    <button
-                      key={cat.name}
-                      type="button"
-                      onClick={() => setCategory(cat.name)}
-                      className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
-                        isSelected 
-                          ? `${cat.bgClass} scale-[1.03]` 
-                          : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200"
-                      }`}
-                    >
-                      <Icon className="w-5 h-5 mb-1.5" />
-                      <span className="text-[10px] font-semibold tracking-tight">{cat.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
+          {/* 4. Category Selector */}
+          <div>
+            <label className="finance-label">Category</label>
+            <div className="grid grid-cols-3 gap-2">
+              {categoryOptions.map((catName) => {
+                const catMeta = CATEGORIES[catName] || { name: catName, icon: FileText, bgClass: "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200" };
+                const Icon = catMeta.icon;
+                const isSelected = category === catName;
+                return (
+                  <button
+                    key={catName}
+                    type="button"
+                    onClick={() => setCategory(catName)}
+                    className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
+                      isSelected 
+                        ? `${catMeta.bgClass} scale-[1.03]` 
+                        : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200"
+                    }`}
+                  >
+                    <Icon className="w-5 h-5 mb-1.5" />
+                    <span className="text-[10px] font-semibold tracking-tight">{catName}</span>
+                  </button>
+                );
+              })}
             </div>
-          )}
+          </div>
 
           {/* 5. Payment Method Selector */}
           <div>
