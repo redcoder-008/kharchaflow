@@ -16,7 +16,8 @@ const DEFAULT_PROFILE = {
   displayName: "Fintech User",
   email: "user@kharchaflow.com",
   photoURL: null,
-  dateSystem: "gregorian"
+  dateSystem: "gregorian",
+  currency: "INR"
 };
 
 const DEFAULT_FINANCIAL_GOALS = [];

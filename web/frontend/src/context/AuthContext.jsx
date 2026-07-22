@@ -69,6 +69,7 @@ export function AuthProvider({ children }) {
         let phone = "";
         let language = "en";
         let dateSystem = "gregorian";
+        let currency = "INR";
         let photoURL = firebaseUser.photoURL;
         try {
           const userDocRef = doc(db, "users", firebaseUser.uid);
@@ -84,6 +85,10 @@ export function AuthProvider({ children }) {
             phone = data.phone || "";
             language = data.language || "en";
             dateSystem = data.dateSystem === "nepali" ? "nepali" : "gregorian";
+            currency = data.currency || "INR";
+            if (typeof window !== "undefined") {
+              window.localStorage.setItem("kharchaflow_currency", currency);
+            }
             // Firestore is the source of truth for the optimized fallback image.
             // Firebase Auth only accepts hosted photo URLs.
             photoURL = data.photoURL || firebaseUser.photoURL;
@@ -105,7 +110,8 @@ export function AuthProvider({ children }) {
           isAdmin,
           phone,
           language,
-          dateSystem
+          dateSystem,
+          currency
         });
       } else {
         setUser(null);
@@ -142,7 +148,8 @@ export function AuthProvider({ children }) {
           displayName: email.toLowerCase() === savedProfile.email.toLowerCase() ? savedProfile.displayName : "Demo User",
           photoURL: null,
           isAdmin: false,
-          dateSystem: savedProfile.dateSystem || "gregorian"
+          dateSystem: savedProfile.dateSystem || "gregorian",
+          currency: savedProfile.currency || "INR"
         };
         
         persistDemoUser(demoUser);
@@ -356,6 +363,9 @@ export function AuthProvider({ children }) {
         const savedProfile = localDB.getProfile();
         const updatedProfile = { ...savedProfile, ...data };
         localDB.saveProfile(updatedProfile);
+        if (data.currency !== undefined && typeof window !== "undefined") {
+          window.localStorage.setItem("kharchaflow_currency", updatedProfile.currency || "INR");
+        }
         
         const updatedUser = { ...user, ...data };
         persistDemoUser(updatedUser);
@@ -379,6 +389,7 @@ export function AuthProvider({ children }) {
           if (data.phone !== undefined) docUpdates.phone = data.phone;
           if (data.language !== undefined) docUpdates.language = data.language;
           if (data.dateSystem !== undefined) docUpdates.dateSystem = data.dateSystem;
+          if (data.currency !== undefined) docUpdates.currency = data.currency;
           if (data.displayName !== undefined) docUpdates.displayName = data.displayName;
           if (data.photoURL !== undefined) docUpdates.photoURL = data.photoURL;
           
@@ -389,6 +400,9 @@ export function AuthProvider({ children }) {
           }
           
           await Promise.all(promises);
+          if (data.currency !== undefined && typeof window !== "undefined") {
+            window.localStorage.setItem("kharchaflow_currency", data.currency);
+          }
           setUser(prev => ({ ...prev, ...data }));
           return true;
         }

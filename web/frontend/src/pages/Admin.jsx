@@ -17,11 +17,10 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
 import { useCalendar } from "../context/CalendarContext";
-import { formatDate, formatMonth } from "../utils/helpers";
+import { formatDate, formatMonth, formatCurrency } from "../utils/helpers";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-const fmt = (n) =>
-  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n ?? 0);
+const fmt = (n) => formatCurrency(n, "INR");
 
 const fmtNum = (n) => new Intl.NumberFormat("en-IN").format(n ?? 0);
 

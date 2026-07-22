@@ -3,17 +3,40 @@ import NepaliDateModule from "nepali-date-converter";
 // The package's ESM build wraps its constructor in a default property.
 const NepaliDate = NepaliDateModule.default || NepaliDateModule;
 
-export const formatCurrency = (value) => {
+const DEFAULT_CURRENCY = "INR";
+const CURRENCY_LOCALES = {
+  INR: "en-IN",
+  NPR: "en-NP",
+  USD: "en-US",
+  EUR: "en-IE",
+  GBP: "en-GB",
+  AUD: "en-AU",
+  JPY: "ja-JP",
+  CAD: "en-CA",
+  SGD: "en-SG",
+  CNY: "zh-CN"
+};
+
+const getStoredCurrency = () => {
+  if (typeof window === "undefined") return DEFAULT_CURRENCY;
+  const fromStorage = window.localStorage.getItem("kharchaflow_currency");
+  return fromStorage && /^[A-Z]{3}$/.test(fromStorage) ? fromStorage : DEFAULT_CURRENCY;
+};
+
+export const getPreferredCurrency = () => getStoredCurrency();
+
+export const formatCurrency = (value, currencyCode = getPreferredCurrency()) => {
   const number = Number(value);
-  if (isNaN(number)) return "Rs. 0.00";
-  
-  // Format with localized thousands separator and fixed decimals
-  const formatted = Math.abs(number).toLocaleString("en-IN", {
+  const locale = CURRENCY_LOCALES[currencyCode] || "en-US";
+  const formatter = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: currencyCode,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   });
 
-  return `Rs. ${number < 0 ? "-" : ""}${formatted}`;
+  if (isNaN(number)) return formatter.format(0);
+  return formatter.format(number);
 };
 
 const parseStoredDate = (dateString) => new Date(`${dateString}T12:00:00`);

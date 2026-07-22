@@ -24,7 +24,8 @@ import {
   Send,
   Landmark,
   Plus,
-  Pencil
+  Pencil,
+  DollarSign
 } from "lucide-react";
 
 export default function Settings() {
@@ -32,6 +33,8 @@ export default function Settings() {
   const { budgets, updateBudgets, bankAccounts, addBankAccount, updateBankAccount, deleteBankAccount } = useFinance();
   const { dateSystem, setDateSystem } = useCalendar();
   const [dateSystemSaving, setDateSystemSaving] = useState(false);
+  const [currencySaving, setCurrencySaving] = useState(false);
+  const [preferredCurrency, setPreferredCurrency] = useState(() => localStorage.getItem("kharchaflow_currency") || "INR");
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [feedbackSaving, setFeedbackSaving] = useState(false);
@@ -82,6 +85,7 @@ export default function Settings() {
       setLanguage(user.language || "en");
       setPhotoURL(user.photoURL || "");
       setPhotoPreview(user.photoURL || "");
+      setPreferredCurrency(user.currency || localStorage.getItem("kharchaflow_currency") || "INR");
     }
   }, [user]);
 
@@ -174,6 +178,20 @@ export default function Settings() {
       alert("Unable to save the date system preference.");
     } finally {
       setDateSystemSaving(false);
+    }
+  };
+
+  const handleCurrencyChange = async (nextCurrency) => {
+    setCurrencySaving(true);
+    try {
+      await updateUserProfile({ currency: nextCurrency });
+      setPreferredCurrency(nextCurrency);
+      localStorage.setItem("kharchaflow_currency", nextCurrency);
+    } catch (err) {
+      console.error("Currency update error:", err);
+      alert("Unable to save the currency preference.");
+    } finally {
+      setCurrencySaving(false);
     }
   };
 
@@ -560,6 +578,35 @@ export default function Settings() {
           </div>
 
           {/* Theme & Display Options */}
+          <div className="finance-card">
+            <h4 className="text-xs font-bold text-white tracking-tight uppercase border-b border-zinc-800/60 pb-3.5 mb-5 flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-emerald-400" />
+              Currency Preference
+            </h4>
+
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold text-zinc-300">Preferred Currency</p>
+                <p className="text-[10px] text-zinc-500">All financial summaries and transaction amounts will use this currency.</p>
+              </div>
+              <select
+                aria-label="Currency"
+                value={preferredCurrency}
+                onChange={(e) => handleCurrencyChange(e.target.value)}
+                disabled={currencySaving}
+                className="finance-input h-10 py-0 w-40 shrink-0 text-xs font-semibold"
+              >
+                <option value="INR">Indian Rupee (₹)</option>
+                <option value="NPR">Nepalese Rupee (Rs.)</option>
+                <option value="USD">US Dollar ($)</option>
+                <option value="EUR">Euro (€)</option>
+                <option value="GBP">British Pound (£)</option>
+                <option value="AUD">Australian Dollar (A$)</option>
+                <option value="JPY">Japanese Yen (¥)</option>
+              </select>
+            </div>
+          </div>
+
           <div className="finance-card">
             <h4 className="text-xs font-bold text-white tracking-tight uppercase border-b border-zinc-800/60 pb-3.5 mb-5 flex items-center gap-2">
               <Sun className="w-4 h-4 text-emerald-400" />
