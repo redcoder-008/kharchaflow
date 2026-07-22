@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { jsPDF } from "jspdf";
 import { useFinance } from "../context/FinanceContext";
 import { useCalendar } from "../context/CalendarContext";
 import { formatCurrency, formatDate } from "../utils/helpers";
@@ -9,9 +10,14 @@ import {
   Trash2, 
   AlertCircle,
   X,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Download,
+  FileText
 } from "lucide-react";
 import AddTransactionModal from "../components/transactions/AddTransactionModal";
+
+const escapeCsvValue = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+const pdfSafeText = (value) => String(value ?? "").replace(/[^\x20-\x7E]/g, "?");
 
 export default function History() {
   const { transactions, deleteTransaction } = useFinance();
@@ -90,6 +96,93 @@ export default function History() {
     minAmount !== "" ||
     maxAmount !== "" ||
     search !== "";
+
+  const exportFileName = `kharchaflow-transactions-${new Date().toISOString().slice(0, 10)}`;
+
+  const downloadCsv = () => {
+    const headers = ["Date", "Type", "Category", "Payment Method", "Provider", "Amount", "Notes"];
+    const rows = filteredTransactions.map((tx) => [
+      tx.date,
+      tx.type,
+      tx.category,
+      tx.paymentMethod,
+      tx.provider,
+      Number(tx.amount) || 0,
+      tx.notes
+    ]);
+    const csv = [headers, ...rows].map((row) => row.map(escapeCsvValue).join(",")).join("\r\n");
+    const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${exportFileName}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadPdf = () => {
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const income = filteredTransactions.filter((tx) => tx.type === "income").reduce((total, tx) => total + (Number(tx.amount) || 0), 0);
+    const expenses = filteredTransactions.filter((tx) => tx.type === "expense").reduce((total, tx) => total + (Number(tx.amount) || 0), 0);
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let y = 16;
+
+    const addHeader = (showSummary = false) => {
+      doc.setTextColor(24, 24, 27);
+      doc.setFontSize(18);
+      doc.text("KharchaFlow Transaction Report", 14, y);
+      doc.setFontSize(9);
+      doc.setTextColor(82, 82, 91);
+      doc.text(`Generated ${new Date().toLocaleDateString("en-US")}`, pageWidth - 14, y, { align: "right" });
+      y += 7;
+      if (showSummary) {
+        doc.text(`Entries: ${filteredTransactions.length} | Income: ${formatCurrency(income)} | Expenses: ${formatCurrency(expenses)} | Net: ${formatCurrency(income - expenses)}`, 14, y);
+        y += 9;
+      }
+      doc.setDrawColor(212, 212, 216);
+      doc.line(14, y, pageWidth - 14, y);
+      y += 6;
+      doc.setFontSize(8);
+      doc.setTextColor(63, 63, 70);
+      doc.text("DATE", 14, y);
+      doc.text("TYPE", 42, y);
+      doc.text("CATEGORY", 65, y);
+      doc.text("PAYMENT METHOD", 100, y);
+      doc.text("NOTES", 148, y);
+      doc.text("AMOUNT", pageWidth - 14, y, { align: "right" });
+      y += 5;
+      doc.line(14, y, pageWidth - 14, y);
+      y += 5;
+    };
+
+    addHeader(true);
+    doc.setFontSize(8);
+    filteredTransactions.forEach((tx, index) => {
+      if (y > 190) {
+        doc.addPage();
+        y = 16;
+        addHeader();
+        doc.setFontSize(8);
+      }
+      const isIncome = tx.type === "income";
+      doc.setTextColor(63, 63, 70);
+      doc.text(pdfSafeText(tx.date), 14, y);
+      doc.setTextColor(isIncome ? 5 : 190, isIncome ? 150 : 24, isIncome ? 105 : 93);
+      doc.text(isIncome ? "Income" : "Expense", 42, y);
+      doc.setTextColor(63, 63, 70);
+      doc.text(pdfSafeText(tx.category).slice(0, 18), 65, y);
+      doc.text(pdfSafeText(`${tx.paymentMethod}${tx.provider ? ` - ${tx.provider}` : ""}`).slice(0, 28), 100, y);
+      doc.text(pdfSafeText(tx.notes || "No details").slice(0, 52), 148, y);
+      doc.setTextColor(isIncome ? 5 : 190, isIncome ? 150 : 24, isIncome ? 105 : 93);
+      doc.text(`${isIncome ? "+" : "-"}${formatCurrency(tx.amount)}`, pageWidth - 14, y, { align: "right" });
+      y += 7;
+      if (index < filteredTransactions.length - 1) {
+        doc.setDrawColor(244, 244, 245);
+        doc.line(14, y - 3.5, pageWidth - 14, y - 3.5);
+      }
+    });
+    doc.save(`${exportFileName}.pdf`);
+  };
 
   return (
     <div className="space-y-6 pb-20 md:pb-8">
@@ -251,6 +344,24 @@ export default function History() {
             <p className="text-[10px] text-zinc-500 font-semibold uppercase mt-0.5">
               Showing {filteredTransactions.length} of {transactions.length} total entries
             </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={downloadCsv}
+              disabled={filteredTransactions.length === 0}
+              className="px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 hover:border-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed text-zinc-300 hover:text-emerald-400 text-[10px] font-bold flex items-center gap-1.5 transition-colors"
+              title="Export visible transactions as CSV"
+            >
+              <Download className="w-3.5 h-3.5" /> CSV
+            </button>
+            <button
+              onClick={downloadPdf}
+              disabled={filteredTransactions.length === 0}
+              className="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed text-zinc-950 text-[10px] font-bold flex items-center gap-1.5 transition-colors"
+              title="Export visible transactions as PDF"
+            >
+              <FileText className="w-3.5 h-3.5" /> PDF
+            </button>
           </div>
         </div>
 
