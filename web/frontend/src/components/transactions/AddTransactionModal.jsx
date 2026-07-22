@@ -295,9 +295,9 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
           {/* 3. Transaction Date */}
           <div>
             <label htmlFor="date" className="finance-label">Transaction Date {dateSystem === "nepali" ? "(Bikram Sambat)" : ""}</label>
-            <div className="relative">
+            <div className="relative" key={`date-picker-${dateSystem}`}>
               {dateSystem === "nepali" ? (
-                <div className="w-full relative">
+                <div className="w-full relative z-50">
                   <NepaliDatePicker
                     inputClassName="finance-input pl-10 w-full"
                     className="w-full"
@@ -315,7 +315,7 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
                   required
                   className="finance-input pl-10 w-full"
                   wrapperClassName="w-full"
-                  withPortal
+                  popperPlacement="bottom-start"
                 />
               )}
               <Calendar className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-zinc-500 pointer-events-none" />
