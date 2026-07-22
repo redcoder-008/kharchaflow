@@ -21,12 +21,15 @@ import {
   CalendarDays,
   MessageSquare,
   Star,
-  Send
+  Send,
+  Landmark,
+  Plus,
+  Pencil
 } from "lucide-react";
 
 export default function Settings() {
   const { user, isDemoMode, logout, updateUserProfile, updateUserPassword, deleteUserAccount } = useAuth();
-  const { budgets, updateBudgets } = useFinance();
+  const { budgets, updateBudgets, bankAccounts, addBankAccount, updateBankAccount, deleteBankAccount } = useFinance();
   const { dateSystem, setDateSystem } = useCalendar();
   const [dateSystemSaving, setDateSystemSaving] = useState(false);
   const [feedbackRating, setFeedbackRating] = useState(0);
@@ -50,6 +53,12 @@ export default function Settings() {
   const [categoryBudgets, setCategoryBudgets] = useState({});
   const [budgetSuccess, setBudgetSuccess] = useState(false);
   const [budgetSaving, setBudgetSaving] = useState(false);
+
+  const [bankAccountName, setBankAccountName] = useState("");
+  const [editingBankAccountId, setEditingBankAccountId] = useState(null);
+  const [bankAccountError, setBankAccountError] = useState("");
+  const [bankAccountSuccess, setBankAccountSuccess] = useState("");
+  const [bankAccountSaving, setBankAccountSaving] = useState(false);
 
   // Theme state fields
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -295,6 +304,60 @@ export default function Settings() {
     setCategoryBudgets((prev) => ({ ...prev, [cat]: val }));
   };
 
+  const resetBankAccountForm = () => {
+    setBankAccountName("");
+    setEditingBankAccountId(null);
+    setBankAccountError("");
+  };
+
+  const handleBankAccountSubmit = async (e) => {
+    e.preventDefault();
+    setBankAccountError("");
+    setBankAccountSuccess("");
+
+    const trimmedName = bankAccountName.trim();
+    if (!trimmedName) {
+      setBankAccountError("Please enter an account name.");
+      return;
+    }
+
+    setBankAccountSaving(true);
+    try {
+      if (editingBankAccountId) {
+        await updateBankAccount(editingBankAccountId, trimmedName);
+        setBankAccountSuccess("Bank account updated.");
+      } else {
+        await addBankAccount(trimmedName);
+        setBankAccountSuccess("Bank account added.");
+      }
+      resetBankAccountForm();
+    } catch (err) {
+      console.error("Bank account save error:", err);
+      setBankAccountError(err.message || "Unable to save bank account.");
+    } finally {
+      setBankAccountSaving(false);
+    }
+  };
+
+  const handleEditBankAccount = (account) => {
+    setEditingBankAccountId(account.id);
+    setBankAccountName(account.name);
+    setBankAccountError("");
+    setBankAccountSuccess("");
+  };
+
+  const handleDeleteBankAccount = async (id) => {
+    if (!confirm("Delete this bank account from your list?")) return;
+    try {
+      await deleteBankAccount(id);
+      if (editingBankAccountId === id) resetBankAccountForm();
+      setBankAccountSuccess("Bank account removed.");
+    } catch (err) {
+      console.error("Delete bank account error:", err);
+      setBankAccountError("Unable to delete bank account.");
+    }
+  };
+
   const handleBudgetsSave = async (e) => {
     e.preventDefault();
     setBudgetSuccess(false);
@@ -516,6 +579,94 @@ export default function Settings() {
                 <Sun className={`w-3.5 h-3.5 text-zinc-500 z-10 ml-0.5 ${!isDarkMode && "text-zinc-950 font-bold"}`} />
                 <Moon className={`w-3.5 h-3.5 text-zinc-500 z-10 mr-0.5 ${isDarkMode && "text-zinc-950 font-bold"}`} />
               </button>
+            </div>
+          </div>
+
+          {/* Bank account manager */}
+          <div className="finance-card">
+            <h4 className="text-xs font-bold text-white tracking-tight uppercase border-b border-zinc-800/60 pb-3.5 mb-5 flex items-center gap-2">
+              <Landmark className="w-4 h-4 text-emerald-400" />
+              Bank Accounts
+            </h4>
+
+            {bankAccountError && (
+              <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/25 rounded-xl text-rose-400 text-xs font-semibold">
+                {bankAccountError}
+              </div>
+            )}
+
+            {bankAccountSuccess && (
+              <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/25 rounded-xl text-emerald-400 text-xs font-semibold">
+                {bankAccountSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleBankAccountSubmit} className="space-y-3 mb-4">
+              <div>
+                <label htmlFor="bank-account-name" className="finance-label">
+                  {editingBankAccountId ? "Edit account name" : "Add account name"}
+                </label>
+                <input
+                  id="bank-account-name"
+                  type="text"
+                  placeholder="NIC Asia, Global IME, eSewa"
+                  value={bankAccountName}
+                  onChange={(e) => setBankAccountName(e.target.value)}
+                  disabled={bankAccountSaving}
+                  className="finance-input"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={bankAccountSaving}
+                  className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs transition-colors"
+                >
+                  {editingBankAccountId ? <Pencil className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                  {editingBankAccountId ? "Save changes" : "Add account"}
+                </button>
+                {editingBankAccountId && (
+                  <button
+                    type="button"
+                    onClick={resetBankAccountForm}
+                    className="px-3 py-2 border border-zinc-800 rounded-xl text-xs text-zinc-400"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </form>
+
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              {bankAccounts.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-zinc-800 p-3 text-xs text-zinc-500">
+                  No bank accounts yet. Add one above and it will appear in transaction forms.
+                </div>
+              ) : (
+                bankAccounts.map((account) => (
+                  <div key={account.id} className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-2.5">
+                    <span className="text-sm font-semibold text-zinc-200">{account.name}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleEditBankAccount(account)}
+                        className="p-2 rounded-lg border border-zinc-800 text-zinc-400 hover:text-zinc-200"
+                        aria-label={`Edit ${account.name}`}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteBankAccount(account.id)}
+                        className="p-2 rounded-lg border border-rose-500/20 text-rose-400 hover:bg-rose-500/10"
+                        aria-label={`Delete ${account.name}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 

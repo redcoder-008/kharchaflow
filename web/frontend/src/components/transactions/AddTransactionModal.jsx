@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useFinance } from "../../context/FinanceContext";
 import { useCalendar } from "../../context/CalendarContext";
-import { CATEGORIES, PAYMENT_METHODS, EWALLET_PROVIDERS, BANK_PROVIDERS } from "../../utils/constants";
+import { CATEGORIES, PAYMENT_METHODS, EWALLET_PROVIDERS } from "../../utils/constants";
 import { formatCurrency, nepaliDateInputToIso, toNepaliDateInput } from "../../utils/helpers";
 import { 
   X, 
@@ -17,7 +17,7 @@ import "nepali-datepicker-reactjs/dist/index.css";
 import { format } from "date-fns";
 
 export default function AddTransactionModal({ isOpen, onClose, editingTransaction, setActivePage, defaultType }) {
-  const { addTransaction, editTransaction, currentBalances } = useFinance();
+  const { addTransaction, editTransaction, currentBalances, bankAccounts } = useFinance();
   const { dateSystem } = useCalendar();
   
   // Form state fields
@@ -82,11 +82,12 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
     if (paymentMethod === "eWallet") {
       setProvider(EWALLET_PROVIDERS[0]);
     } else if (paymentMethod === "Bank Account" || paymentMethod === "Mobile Banking") {
-      setProvider(BANK_PROVIDERS[0]);
+      const firstAccount = bankAccounts[0]?.name || "";
+      setProvider(firstAccount);
     } else {
       setProvider("");
     }
-  }, [paymentMethod, editingTransaction]);
+  }, [paymentMethod, editingTransaction, bankAccounts]);
 
   useEffect(() => {
     if (editingTransaction) return;
@@ -130,6 +131,7 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
 
   const availableBalance = getAvailableBalance();
   const numericAmount = Number(amount || 0);
+  const bankAccountOptions = bankAccounts.length > 0 ? bankAccounts : [];
   const resultingBalance = type === "expense" 
     ? availableBalance - numericAmount 
     : availableBalance + numericAmount;
@@ -420,17 +422,26 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
 
           {(paymentMethod === "Bank Account" || paymentMethod === "Mobile Banking") && (
             <div>
-              <label htmlFor="provider" className="finance-label">Bank Partner</label>
-              <select
-                id="provider"
-                value={provider}
-                onChange={(e) => setProvider(e.target.value)}
-                className="finance-input"
-              >
-                {BANK_PROVIDERS.map((bank) => (
-                  <option key={bank} value={bank}>{bank}</option>
-                ))}
-              </select>
+              <label htmlFor="provider" className="finance-label">Select Account</label>
+              {bankAccountOptions.length > 0 ? (
+                <select
+                  id="provider"
+                  value={provider}
+                  onChange={(e) => setProvider(e.target.value)}
+                  className="finance-input"
+                >
+                  {bankAccountOptions.map((account) => (
+                    <option key={account.id || account.name} value={account.name}>{account.name}</option>
+                  ))}
+                  {!bankAccountOptions.some((account) => account.name === provider) && provider ? (
+                    <option value={provider}>{provider}</option>
+                  ) : null}
+                </select>
+              ) : (
+                <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-950/50 px-3 py-3 text-sm text-zinc-500">
+                  No bank accounts yet. Create one in Settings first.
+                </div>
+              )}
             </div>
           )}
 

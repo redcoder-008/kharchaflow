@@ -27,6 +27,7 @@ export function FinanceProvider({ children }) {
   const [budgets, setBudgets] = useState({});
   const [financialGoals, setFinancialGoals] = useState([]);
   const [initialBalances, setInitialBalances] = useState({});
+  const [bankAccounts, setBankAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Sync status state
@@ -59,6 +60,7 @@ export function FinanceProvider({ children }) {
       setBudgets(localDB.getBudgets());
       setFinancialGoals(localDB.getFinancialGoals());
       setInitialBalances(localDB.getInitialBalances());
+      setBankAccounts(localDB.getBankAccounts());
       setLoading(false);
       return;
     }
@@ -77,6 +79,7 @@ export function FinanceProvider({ children }) {
     setBudgets({});
     setFinancialGoals([]);
     setInitialBalances({});
+    setBankAccounts([]);
 
     // Live Firebase Firestore Sync
     if (!db) {
@@ -111,17 +114,21 @@ export function FinanceProvider({ children }) {
         if (data.budgets) setBudgets(data.budgets);
         if (data.financialGoals) setFinancialGoals(data.financialGoals);
         if (data.initialBalances) setInitialBalances(data.initialBalances);
+        setBankAccounts(Array.isArray(data.bankAccounts) ? data.bankAccounts : localDB.getBankAccounts());
       } else {
         // Fallback: Seed unified document
         const defaultBudgets = localDB.getDefaultBudgets();
         const defaultBalances = localDB.getDefaultInitialBalances();
+        const initialBankAccounts = localDB.getBankAccounts();
         setDoc(userDocRef, {
           budgets: defaultBudgets,
           initialBalances: defaultBalances,
-          financialGoals: []
+          financialGoals: [],
+          bankAccounts: initialBankAccounts
         }, { merge: true });
         setBudgets(defaultBudgets);
         setInitialBalances(defaultBalances);
+        setBankAccounts(initialBankAccounts);
       }
       setPendingUser(docSnap.metadata.hasPendingWrites);
       setLoading(false);
@@ -286,6 +293,133 @@ export function FinanceProvider({ children }) {
     }
   };
 
+  const ensureBankAccountBalances = (balances, accountName) => {
+    const nextBalances = JSON.parse(JSON.stringify(balances || {}));
+    if (!nextBalances["Bank Account"]) nextBalances["Bank Account"] = {};
+    if (!nextBalances["Mobile Banking"]) nextBalances["Mobile Banking"] = {};
+    if (nextBalances["Bank Account"][accountName] === undefined) nextBalances["Bank Account"][accountName] = 0;
+    if (nextBalances["Mobile Banking"][accountName] === undefined) nextBalances["Mobile Banking"][accountName] = 0;
+    return nextBalances;
+  };
+
+  const addBankAccount = async (accountName) => {
+    const normalizedName = accountName.trim();
+    if (!normalizedName) throw new Error("Bank account name is required.");
+
+    const isDuplicate = bankAccounts.some((account) => account.name.toLowerCase() === normalizedName.toLowerCase());
+    if (isDuplicate) throw new Error("This account name already exists.");
+
+    const nextBankAccounts = [{ id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name: normalizedName }, ...bankAccounts];
+    const nextBalances = ensureBankAccountBalances(initialBalances, normalizedName);
+
+    if (isDemoMode || !user) {
+      setBankAccounts(nextBankAccounts);
+      setInitialBalances(nextBalances);
+      localDB.saveBankAccounts(nextBankAccounts);
+      localDB.saveInitialBalances(nextBalances);
+      return true;
+    }
+
+    setBankAccounts(nextBankAccounts);
+    setInitialBalances(nextBalances);
+
+    try {
+      const userDocRef = doc(db, "users", user.uid);
+      await setDoc(userDocRef, { bankAccounts: nextBankAccounts, initialBalances: nextBalances }, { merge: true });
+      return true;
+    } catch (error) {
+      console.error("Add bank account error:", error);
+      throw error;
+    }
+  };
+
+  const updateBankAccount = async (id, accountName) => {
+    const normalizedName = accountName.trim();
+    if (!normalizedName) throw new Error("Bank account name is required.");
+
+    const existingAccount = bankAccounts.find((account) => account.id === id);
+    if (!existingAccount) throw new Error("Bank account not found.");
+
+    const isDuplicate = bankAccounts.some((account) => account.id !== id && account.name.toLowerCase() === normalizedName.toLowerCase());
+    if (isDuplicate) throw new Error("This account name already exists.");
+
+    const nextBankAccounts = bankAccounts.map((account) => account.id === id ? { ...account, name: normalizedName } : account);
+    const nextBalances = JSON.parse(JSON.stringify(initialBalances || {}));
+
+    if (existingAccount.name !== normalizedName) {
+      if (nextBalances["Bank Account"]?.[existingAccount.name] !== undefined) {
+        const oldValue = nextBalances["Bank Account"][existingAccount.name];
+        nextBalances["Bank Account"][normalizedName] = oldValue;
+        delete nextBalances["Bank Account"][existingAccount.name];
+      }
+      if (nextBalances["Mobile Banking"]?.[existingAccount.name] !== undefined) {
+        const oldValue = nextBalances["Mobile Banking"][existingAccount.name];
+        nextBalances["Mobile Banking"][normalizedName] = oldValue;
+        delete nextBalances["Mobile Banking"][existingAccount.name];
+      }
+    }
+
+    if (!nextBalances["Bank Account"]) nextBalances["Bank Account"] = {};
+    if (!nextBalances["Mobile Banking"]) nextBalances["Mobile Banking"] = {};
+    if (nextBalances["Bank Account"][normalizedName] === undefined) nextBalances["Bank Account"][normalizedName] = 0;
+    if (nextBalances["Mobile Banking"][normalizedName] === undefined) nextBalances["Mobile Banking"][normalizedName] = 0;
+
+    if (isDemoMode || !user) {
+      setBankAccounts(nextBankAccounts);
+      setInitialBalances(nextBalances);
+      localDB.saveBankAccounts(nextBankAccounts);
+      localDB.saveInitialBalances(nextBalances);
+      return true;
+    }
+
+    setBankAccounts(nextBankAccounts);
+    setInitialBalances(nextBalances);
+
+    try {
+      const userDocRef = doc(db, "users", user.uid);
+      await setDoc(userDocRef, { bankAccounts: nextBankAccounts, initialBalances: nextBalances }, { merge: true });
+      return true;
+    } catch (error) {
+      console.error("Update bank account error:", error);
+      throw error;
+    }
+  };
+
+  const deleteBankAccount = async (id) => {
+    const existingAccount = bankAccounts.find((account) => account.id === id);
+    if (!existingAccount) return true;
+
+    const nextBankAccounts = bankAccounts.filter((account) => account.id !== id);
+    const nextBalances = JSON.parse(JSON.stringify(initialBalances || {}));
+
+    if (nextBalances["Bank Account"]?.[existingAccount.name] !== undefined) {
+      delete nextBalances["Bank Account"][existingAccount.name];
+    }
+    if (nextBalances["Mobile Banking"]?.[existingAccount.name] !== undefined) {
+      delete nextBalances["Mobile Banking"][existingAccount.name];
+    }
+
+    if (isDemoMode || !user) {
+      setBankAccounts(nextBankAccounts);
+      setInitialBalances(nextBalances);
+      localDB.saveBankAccounts(nextBankAccounts);
+      localDB.saveInitialBalances(nextBalances);
+      return true;
+    }
+
+    setBankAccounts(nextBankAccounts);
+    setInitialBalances(nextBalances);
+
+    try {
+      const userDocRef = doc(db, "users", user.uid);
+      await setDoc(userDocRef, { bankAccounts: nextBankAccounts, initialBalances: nextBalances }, { merge: true });
+      return true;
+    } catch (error) {
+      console.error("Delete bank account error:", error);
+      throw error;
+    }
+  };
+
   // Guaranteed global chronological sorting
   const sortedTransactions = useMemo(() => {
     return [...transactions].sort((a, b) => {
@@ -379,12 +513,16 @@ export function FinanceProvider({ children }) {
     totals,
     loading,
     syncStatus,
+    bankAccounts,
     addTransaction,
     editTransaction,
     deleteTransaction,
     updateBudgets,
     saveFinancialGoals,
-    updateInitialBalance
+    updateInitialBalance,
+    addBankAccount,
+    updateBankAccount,
+    deleteBankAccount
   };
 
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>;
