@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useMemo } from "react";
 import { useAuth } from "./AuthContext";
 import { localDB } from "../../../backend/db/storage";
 import { db } from "../../../backend/db/firebase";
+import { CATEGORIES } from "../utils/constants";
 import { 
   collection, 
   query, 
@@ -11,6 +12,7 @@ import {
   doc, 
   setDoc,
   deleteDoc,
+  deleteField,
   updateDoc 
 } from "firebase/firestore";
 
@@ -24,6 +26,7 @@ export function FinanceProvider({ children }) {
   const { user, isDemoMode } = useAuth();
   
   const [transactions, setTransactions] = useState([]);
+  const [deletedTransactions, setDeletedTransactions] = useState([]);
   const [budgets, setBudgets] = useState({});
   const [financialGoals, setFinancialGoals] = useState([]);
   const [initialBalances, setInitialBalances] = useState({});
@@ -57,7 +60,9 @@ export function FinanceProvider({ children }) {
   useEffect(() => {
     if (isDemoMode) {
       // LocalStorage Demo Mode Data Sync
-      setTransactions(localDB.getTransactions());
+      const storedTransactions = localDB.getTransactions();
+      setTransactions(storedTransactions.filter((tx) => !tx.deletedAt));
+      setDeletedTransactions(storedTransactions.filter((tx) => tx.deletedAt));
       setBudgets(localDB.getBudgets());
       setFinancialGoals(localDB.getFinancialGoals());
       setInitialBalances(localDB.getInitialBalances());
@@ -69,6 +74,7 @@ export function FinanceProvider({ children }) {
 
     if (!user) {
       setTransactions([]);
+      setDeletedTransactions([]);
       setBudgets({});
       setFinancialGoals([]);
       setInitialBalances({});
@@ -78,6 +84,7 @@ export function FinanceProvider({ children }) {
 
     // Clear state before live sync to prevent data leakage from previous users
     setTransactions([]);
+    setDeletedTransactions([]);
     setBudgets({});
     setFinancialGoals([]);
     setInitialBalances({});
@@ -103,7 +110,8 @@ export function FinanceProvider({ children }) {
       snapshot.forEach((doc) => {
         txList.push({ id: doc.id, ...doc.data() });
       });
-      setTransactions(txList);
+      setTransactions(txList.filter((tx) => !tx.deletedAt));
+      setDeletedTransactions(txList.filter((tx) => tx.deletedAt));
       setPendingTx(snapshot.metadata.hasPendingWrites);
     }, (err) => {
       console.error("Firestore transactions error: ", err);
@@ -164,7 +172,7 @@ export function FinanceProvider({ children }) {
         ...transactions
       ];
       setTransactions(txList);
-      localDB.saveTransactions(txList);
+      localDB.saveTransactions([...txList, ...deletedTransactions]);
       return true;
     } else {
       const txToSave = { ...newTx, uid: user.uid };
@@ -193,7 +201,7 @@ export function FinanceProvider({ children }) {
     if (isDemoMode || !user) {
       const txList = transactions.map((tx) => tx.id === id ? { ...tx, ...updated } : tx);
       setTransactions(txList);
-      localDB.saveTransactions(txList);
+      localDB.saveTransactions([...txList, ...deletedTransactions]);
       return true;
     } else {
       // Optimistic update
@@ -209,22 +217,67 @@ export function FinanceProvider({ children }) {
   };
 
   const deleteTransaction = async (id) => {
+    const deletedAt = new Date().toISOString();
     if (isDemoMode || !user) {
-      const txList = transactions.filter((tx) => tx.id !== id);
-      setTransactions(txList);
-      localDB.saveTransactions(txList);
+      const transaction = transactions.find((tx) => tx.id === id);
+      if (!transaction) return false;
+      const nextTransactions = transactions.filter((tx) => tx.id !== id);
+      const nextDeletedTransactions = [{ ...transaction, deletedAt }, ...deletedTransactions];
+      setTransactions(nextTransactions);
+      setDeletedTransactions(nextDeletedTransactions);
+      localDB.saveTransactions([...nextTransactions, ...nextDeletedTransactions]);
       return true;
     } else {
       // Optimistic update
+      const transaction = transactions.find((tx) => tx.id === id);
+      if (!transaction) return false;
       setTransactions(prev => prev.filter((tx) => tx.id !== id));
+      setDeletedTransactions(prev => [{ ...transaction, deletedAt }, ...prev]);
       
       const txDocRef = doc(db, "users", user.uid, "transactions", id);
-      deleteDoc(txDocRef).catch(error => {
-        console.error("Delete transaction error:", error);
+      updateDoc(txDocRef, { deletedAt }).catch(error => {
+        console.error("Move transaction to recycle bin error:", error);
       });
       
       return true;
     }
+  };
+
+  const restoreTransaction = async (id) => {
+    const transaction = deletedTransactions.find((tx) => tx.id === id);
+    if (!transaction) return false;
+    const restoredTransaction = { ...transaction };
+    delete restoredTransaction.deletedAt;
+
+    if (isDemoMode || !user) {
+      const nextDeletedTransactions = deletedTransactions.filter((tx) => tx.id !== id);
+      const nextTransactions = [restoredTransaction, ...transactions];
+      setDeletedTransactions(nextDeletedTransactions);
+      setTransactions(nextTransactions);
+      localDB.saveTransactions([...nextTransactions, ...nextDeletedTransactions]);
+      return true;
+    }
+
+    setDeletedTransactions(prev => prev.filter((tx) => tx.id !== id));
+    setTransactions(prev => [restoredTransaction, ...prev]);
+    updateDoc(doc(db, "users", user.uid, "transactions", id), { deletedAt: deleteField() })
+      .catch((error) => console.error("Restore transaction error:", error));
+    return true;
+  };
+
+  const permanentlyDeleteTransaction = async (id) => {
+    if (!deletedTransactions.some((tx) => tx.id === id)) return false;
+    if (isDemoMode || !user) {
+      const nextDeletedTransactions = deletedTransactions.filter((tx) => tx.id !== id);
+      setDeletedTransactions(nextDeletedTransactions);
+      localDB.saveTransactions([...transactions, ...nextDeletedTransactions]);
+      return true;
+    }
+
+    setDeletedTransactions(prev => prev.filter((tx) => tx.id !== id));
+    deleteDoc(doc(db, "users", user.uid, "transactions", id))
+      .catch((error) => console.error("Permanently delete transaction error:", error));
+    return true;
   };
 
   const updateBudgets = async (newBudgets) => {
@@ -432,7 +485,7 @@ export function FinanceProvider({ children }) {
     if (!normalizedName) throw new Error("Category name is required.");
 
     const safeName = normalizedName.replace(/\s+/g, " ");
-    const isDuplicate = categories.some((category) => category.name.toLowerCase() === safeName.toLowerCase());
+    const isDuplicate = categories.some((category) => category.name.toLowerCase() === safeName.toLowerCase()) || Object.keys(CATEGORIES).some((name) => name.toLowerCase() === safeName.toLowerCase());
     if (isDuplicate) throw new Error("This category already exists.");
 
     const nextCategories = [{ id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name: safeName }, ...categories];
@@ -463,7 +516,7 @@ export function FinanceProvider({ children }) {
     if (!existingCategory) throw new Error("Category not found.");
 
     const safeName = normalizedName.replace(/\s+/g, " ");
-    const isDuplicate = categories.some((category) => category.id !== id && category.name.toLowerCase() === safeName.toLowerCase());
+    const isDuplicate = categories.some((category) => category.id !== id && category.name.toLowerCase() === safeName.toLowerCase()) || Object.keys(CATEGORIES).some((name) => name.toLowerCase() === safeName.toLowerCase());
     if (isDuplicate) throw new Error("This category already exists.");
 
     const nextCategories = categories.map((category) => category.id === id ? { ...category, name: safeName } : category);
@@ -506,6 +559,32 @@ export function FinanceProvider({ children }) {
       return true;
     } catch (error) {
       console.error("Delete category error:", error);
+      throw error;
+    }
+  };
+
+  const toggleDefaultCategory = async (categoryName) => {
+    if (!CATEGORIES[categoryName] || categoryName === "Income") {
+      throw new Error("That category cannot be used for expenses.");
+    }
+
+    const existingCategory = categories.find((category) => category.name === categoryName);
+    const nextCategories = existingCategory
+      ? categories.filter((category) => category.id !== existingCategory.id)
+      : [{ id: `default-${categoryName.toLowerCase()}`, name: categoryName, isDefault: true }, ...categories];
+
+    if (isDemoMode || !user) {
+      setCategories(nextCategories);
+      localDB.saveCustomCategories(nextCategories);
+      return true;
+    }
+
+    setCategories(nextCategories);
+    try {
+      await setDoc(doc(db, "users", user.uid), { categories: nextCategories }, { merge: true });
+      return true;
+    } catch (error) {
+      console.error("Update default category selection error:", error);
       throw error;
     }
   };
@@ -596,6 +675,7 @@ export function FinanceProvider({ children }) {
 
   const value = {
     transactions: sortedTransactions,
+    deletedTransactions,
     budgets,
     financialGoals,
     initialBalances,
@@ -608,6 +688,8 @@ export function FinanceProvider({ children }) {
     addTransaction,
     editTransaction,
     deleteTransaction,
+    restoreTransaction,
+    permanentlyDeleteTransaction,
     updateBudgets,
     saveFinancialGoals,
     updateInitialBalance,
@@ -616,7 +698,8 @@ export function FinanceProvider({ children }) {
     deleteBankAccount,
     addCategory,
     updateCategory,
-    deleteCategory
+    deleteCategory,
+    toggleDefaultCategory
   };
 
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>;

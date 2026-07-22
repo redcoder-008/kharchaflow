@@ -96,9 +96,9 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
     if (type === "income") {
       setCategory("Income");
     } else {
-      setCategory("Food");
+      setCategory(categories?.[0]?.name || "Food");
     }
-  }, [type, editingTransaction]);
+  }, [type, editingTransaction, categories]);
 
   const getAvailableBalance = () => {
     if (!currentBalances) return 0;
@@ -132,7 +132,9 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
   const availableBalance = getAvailableBalance();
   const numericAmount = Number(amount || 0);
   const bankAccountOptions = bankAccounts.length > 0 ? bankAccounts : [];
-  const categoryOptions = [...new Set([...(Object.keys(CATEGORIES).filter((name) => name !== "Income")), ...(categories || []).map((category) => category.name), category, editingTransaction?.category].filter(Boolean))];
+  const categoryOptions = type === "income"
+    ? ["Income"]
+    : (categories || []).map((expenseCategory) => expenseCategory.name);
   const resultingBalance = type === "expense" 
     ? availableBalance - numericAmount 
     : availableBalance + numericAmount;
@@ -343,8 +345,11 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
           {/* 4. Category Selector */}
           <div>
             <label className="finance-label">Category</label>
-            <div className="grid grid-cols-3 gap-2">
-              {categoryOptions.map((catName) => {
+            {categoryOptions.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-zinc-800 px-3 py-3 text-xs text-zinc-500">Choose at least one expense category in Settings to record an expense.</p>
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
+                {categoryOptions.map((catName) => {
                 const catMeta = CATEGORIES[catName] || { name: catName, icon: FileText, bgClass: "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200" };
                 const Icon = catMeta.icon;
                 const isSelected = category === catName;
@@ -355,7 +360,7 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
                     onClick={() => setCategory(catName)}
                     className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
                       isSelected 
-                        ? `${catMeta.bgClass} scale-[1.03]` 
+                        ? `${catMeta.bgClass} ring-1 ring-emerald-400/70 text-emerald-300 scale-[1.03]` 
                         : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200"
                     }`}
                   >
@@ -363,8 +368,9 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
                     <span className="text-[10px] font-semibold tracking-tight">{catName}</span>
                   </button>
                 );
-              })}
-            </div>
+                })}
+              </div>
+            )}
           </div>
 
           {/* 5. Payment Method Selector */}

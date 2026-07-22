@@ -12,7 +12,8 @@ import {
   X,
   SlidersHorizontal,
   Download,
-  FileText
+  FileText,
+  RotateCcw
 } from "lucide-react";
 import AddTransactionModal from "../components/transactions/AddTransactionModal";
 
@@ -20,7 +21,7 @@ const escapeCsvValue = (value) => `"${String(value ?? "").replaceAll('"', '""')}
 const pdfSafeText = (value) => String(value ?? "").replace(/[^\x20-\x7E]/g, "?");
 
 export default function History() {
-  const { transactions, deleteTransaction } = useFinance();
+  const { transactions, deletedTransactions, deleteTransaction, restoreTransaction, permanentlyDeleteTransaction } = useFinance();
   const { dateSystem } = useCalendar();
   
   // Filters & Search State
@@ -39,6 +40,7 @@ export default function History() {
   const [showFiltersMobile, setShowFiltersMobile] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [showRecycleBin, setShowRecycleBin] = useState(false);
 
   // Filter and Search logic
   const filteredTransactions = useMemo(() => {
@@ -186,6 +188,59 @@ export default function History() {
 
   return (
     <div className="space-y-6 pb-20 md:pb-8">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-base font-bold text-white">{showRecycleBin ? "Recycle Bin" : "Transaction History"}</h3>
+          <p className="text-xs text-zinc-500 mt-0.5">{showRecycleBin ? "Restore deleted transactions or remove them permanently." : "Review, filter, and manage your transaction ledger."}</p>
+        </div>
+        <button
+          onClick={() => setShowRecycleBin((current) => !current)}
+          className={`px-3 py-2 rounded-xl border text-[10px] font-bold flex items-center gap-1.5 transition-colors ${showRecycleBin ? "bg-emerald-500 text-zinc-950 border-emerald-400" : "bg-zinc-950 border-zinc-800 text-zinc-300 hover:text-emerald-400"}`}
+        >
+          <Trash2 className="w-3.5 h-3.5" /> {showRecycleBin ? "Back to History" : `Recycle Bin${deletedTransactions.length ? ` (${deletedTransactions.length})` : ""}`}
+        </button>
+      </div>
+
+      {showRecycleBin ? (
+        <div className="finance-card overflow-hidden">
+          {deletedTransactions.length === 0 ? (
+            <div className="py-16 flex flex-col items-center text-center gap-2">
+              <Trash2 className="w-9 h-9 text-zinc-700" />
+              <h4 className="text-sm font-semibold text-zinc-400">Recycle Bin is empty</h4>
+              <p className="text-xs text-zinc-600">Deleted transactions will stay here until you restore or permanently delete them.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">{deletedTransactions.length} deleted {deletedTransactions.length === 1 ? "transaction" : "transactions"}</p>
+              {deletedTransactions.map((tx) => {
+                const isIncome = tx.type === "income";
+                return (
+                  <div key={tx.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold">
+                        <span className={isIncome ? "text-emerald-400" : "text-zinc-400"}>{isIncome ? "INCOME" : "EXPENSE"}</span>
+                        <span className="text-zinc-600">{formatDate(tx.date, dateSystem)}</span>
+                        <span className="text-zinc-500">Deleted {tx.deletedAt ? new Date(tx.deletedAt).toLocaleDateString() : "recently"}</span>
+                      </div>
+                      <p className="text-sm font-bold text-zinc-200 truncate mt-1">{tx.notes || "No details"}</p>
+                      <p className="text-xs text-zinc-500 mt-1">{tx.category} · {tx.paymentMethod}{tx.provider ? ` (${tx.provider})` : ""} · <span className={isIncome ? "text-emerald-400" : "text-zinc-300"}>{isIncome ? "+" : "-"}{formatCurrency(tx.amount)}</span></p>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <button onClick={() => restoreTransaction(tx.id)} className="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-[10px] font-bold flex items-center gap-1.5 transition-colors">
+                        <RotateCcw className="w-3.5 h-3.5" /> Restore
+                      </button>
+                      <button onClick={() => { if (window.confirm("Permanently delete this transaction? This cannot be undone.")) permanentlyDeleteTransaction(tx.id); }} className="px-3 py-2 rounded-xl bg-zinc-950 border border-rose-500/30 hover:bg-rose-500/10 text-rose-400 text-[10px] font-bold flex items-center gap-1.5 transition-colors">
+                        <Trash2 className="w-3.5 h-3.5" /> Delete forever
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
       
       {/* 1. Filter Control Panel */}
       <div className="finance-card space-y-4">
@@ -519,6 +574,9 @@ export default function History() {
 
       </div>
 
+        </>
+      )}
+
       {/* Edit Drawer Integration */}
       <AddTransactionModal 
         isOpen={isEditOpen} 
@@ -539,9 +597,9 @@ export default function History() {
                 <AlertCircle className="w-5 h-5" />
               </div>
               <div className="flex-1">
-                <h3 className="text-base font-bold text-white mb-2">Confirm Transaction Deletion</h3>
+                <h3 className="text-base font-bold text-white mb-2">Move to Recycle Bin?</h3>
                 <p className="text-xs text-zinc-450 leading-relaxed mb-6">
-                  Are you sure you want to permanently delete this transaction? This action is irreversible and the transaction record will be permanently removed from your history ledger.
+                  This transaction will be removed from your history and stored in the Recycle Bin. You can restore it or permanently delete it later.
                 </p>
                 <div className="flex gap-3 justify-end">
                   <button
@@ -564,7 +622,7 @@ export default function History() {
                     }}
                     className="px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-500 hover:bg-rose-600 text-white transition-colors shadow-md hover:shadow-rose-500/20"
                   >
-                    Delete Record
+                    Move to Bin
                   </button>
                 </div>
               </div>
@@ -582,8 +640,8 @@ export default function History() {
             </svg>
           </div>
           <div>
-            <h5 className="text-xs font-bold text-white">Transaction Record Deleted</h5>
-            <p className="text-[10px] text-zinc-400 font-medium mt-0.5">The selected transaction record has been successfully and permanently deleted.</p>
+            <h5 className="text-xs font-bold text-white">Transaction moved to Recycle Bin</h5>
+            <p className="text-[10px] text-zinc-400 font-medium mt-0.5">You can restore it or permanently remove it from the Recycle Bin.</p>
           </div>
         </div>
       )}

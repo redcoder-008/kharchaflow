@@ -32,7 +32,7 @@ import {
 
 export default function Settings() {
   const { user, isDemoMode, logout, updateUserProfile, updateUserPassword, deleteUserAccount } = useAuth();
-  const { budgets, updateBudgets, bankAccounts, addBankAccount, updateBankAccount, deleteBankAccount, categories, addCategory, updateCategory, deleteCategory } = useFinance();
+  const { budgets, updateBudgets, bankAccounts, addBankAccount, updateBankAccount, deleteBankAccount, categories, addCategory, updateCategory, deleteCategory, toggleDefaultCategory } = useFinance();
   const { dateSystem, setDateSystem } = useCalendar();
   const [dateSystemSaving, setDateSystemSaving] = useState(false);
   const [currencySaving, setCurrencySaving] = useState(false);
@@ -437,6 +437,17 @@ export default function Settings() {
     }
   };
 
+  const handleDefaultCategoryToggle = async (categoryName) => {
+    setCategoryError("");
+    setCategorySuccess("");
+    try {
+      await toggleDefaultCategory(categoryName);
+    } catch (err) {
+      console.error("Default category selection error:", err);
+      setCategoryError("Unable to update the selected categories.");
+    }
+  };
+
   const handleBudgetsSave = async (e) => {
     e.preventDefault();
     setBudgetSuccess(false);
@@ -776,6 +787,106 @@ export default function Settings() {
                 ))
               )}
             </div>
+          </div>
+
+          {/* Custom category manager */}
+          <div className="finance-card">
+            <h4 className="text-xs font-bold text-white tracking-tight uppercase border-b border-zinc-800/60 pb-3.5 mb-5 flex items-center gap-2">
+              <Tag className="w-4 h-4 text-emerald-400" />
+              Custom Categories
+            </h4>
+
+            <p className="text-[10px] text-zinc-500 mb-4">Select exactly the default categories you want to see when recording an expense, then add any categories of your own.</p>
+
+            <div className="mb-5">
+              <p className="finance-label mb-2">Default expense categories</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.keys(CATEGORIES).filter((name) => name !== "Income").map((name) => {
+                  const isSelected = categories.some((category) => category.name === name);
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={() => handleDefaultCategoryToggle(name)}
+                      className={`px-3 py-2 rounded-xl border text-[10px] font-bold transition-colors ${isSelected ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-zinc-950 border-zinc-800 text-zinc-500 hover:text-zinc-300"}`}
+                      aria-pressed={isSelected}
+                    >
+                      {isSelected ? "✓ " : "+ "}{name}
+                    </button>
+                  );
+                })}
+                {categories.filter((category) => !category.isDefault).map((category) => (
+                  <div key={category.id} className="inline-flex items-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
+                    <span className="px-3 py-2 text-[10px] font-bold">{category.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleEditCategory(category)}
+                      className="p-2 border-l border-emerald-500/20 hover:bg-emerald-500/10"
+                      aria-label={`Edit ${category.name}`}
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteCategory(category.id)}
+                      className="p-2 border-l border-emerald-500/20 hover:bg-rose-500/10 hover:text-rose-400"
+                      aria-label={`Delete ${category.name}`}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {categoryError && (
+              <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/25 rounded-xl text-rose-400 text-xs font-semibold">
+                {categoryError}
+              </div>
+            )}
+
+            {categorySuccess && (
+              <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/25 rounded-xl text-emerald-400 text-xs font-semibold">
+                {categorySuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleCategorySubmit} className="space-y-3 mb-4">
+              <div>
+                <label htmlFor="custom-category-name" className="finance-label">
+                  {editingCategoryId ? "Edit category name" : "Add category name"}
+                </label>
+                <input
+                  id="custom-category-name"
+                  type="text"
+                  placeholder="e.g. Freelance, Pets, Subscriptions"
+                  value={categoryName}
+                  onChange={(e) => setCategoryName(e.target.value)}
+                  disabled={categorySaving}
+                  className="finance-input"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={categorySaving}
+                  className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs transition-colors disabled:opacity-60"
+                >
+                  {editingCategoryId ? <Pencil className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                  {editingCategoryId ? "Save changes" : "Add category"}
+                </button>
+                {editingCategoryId && (
+                  <button
+                    type="button"
+                    onClick={resetCategoryForm}
+                    className="px-3 py-2 border border-zinc-800 rounded-xl text-xs text-zinc-400"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </form>
+
           </div>
 
           {/* Monthly Budget caps editor */}

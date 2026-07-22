@@ -679,7 +679,7 @@ export default function Dashboard() {
                           onClick={() => {
                             if (
                               confirm(
-                                "Are you sure you want to delete this transaction?",
+                                "Move this transaction to the Recycle Bin? You can restore it later from History.",
                               )
                             ) {
                               deleteTransaction(tx.id);

@@ -22,7 +22,18 @@ const DEFAULT_PROFILE = {
 
 const DEFAULT_FINANCIAL_GOALS = [];
 const DEFAULT_BANK_ACCOUNTS = [];
-const DEFAULT_CUSTOM_CATEGORIES = [];
+// These are the expense categories selected for a new user. Users can turn
+// individual defaults on or off from Settings, or add their own categories.
+const DEFAULT_CUSTOM_CATEGORIES = [
+  "Food",
+  "Transport",
+  "Shopping",
+  "Bills",
+  "Entertainment",
+  "Education",
+  "Health",
+  "Others"
+].map((name) => ({ id: `default-${name.toLowerCase()}`, name, isDefault: true }));
 
 // Initial state of balances mapped to payment methods (all default to zero)
 const DEFAULT_INITIAL_BALANCES = {
