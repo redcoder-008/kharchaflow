@@ -245,3 +245,74 @@ input[type=number] {
 .react-datepicker-popper[data-placement^=top] .react-datepicker__triangle::before, .react-datepicker-popper[data-placement^=top] .react-datepicker__triangle::after {
   @apply border-t-zinc-900 !important;
 }
+
+/* ── Nepali DatePicker Dark Theme Overrides ────────────────────────────── */
+.nepali-date-picker {
+  @apply w-full;
+}
+
+.nepali-date-picker .calender {
+  @apply bg-zinc-900 border border-zinc-800 text-zinc-300 shadow-xl rounded-xl !important;
+  font-family: inherit !important;
+  font-size: 12px !important;
+  padding: 12px !important;
+  width: 280px !important;
+  margin-top: 8px;
+  left: 50% !important;
+  transform: translateX(-50%);
+  z-index: 99999 !important;
+}
+
+.nepali-date-picker .calender .calendar-controller .control.month,
+.nepali-date-picker .calender .calendar-controller .control.year {
+  @apply border-zinc-800 bg-zinc-950 text-zinc-200 rounded-lg !important;
+  line-height: 22px !important;
+  font-size: 13px !important;
+}
+
+.nepali-date-picker .calender .calendar-controller .control .drop-down {
+  @apply bg-zinc-900 border border-zinc-800 shadow-xl rounded-lg !important;
+}
+
+.nepali-date-picker .calender .calendar-controller .control .drop-down li {
+  @apply text-zinc-300 hover:bg-zinc-800 transition-colors !important;
+}
+
+.nepali-date-picker .calender .calendar-controller .control .drop-down li.active {
+  @apply bg-emerald-500 text-zinc-950 font-bold !important;
+}
+
+.nepali-date-picker .calender td.month-day {
+  @apply hover:bg-zinc-800 hover:text-zinc-100 cursor-pointer transition-colors !important;
+  height: 32px !important;
+  width: 32px !important;
+  border-radius: 50% !important;
+}
+
+.nepali-date-picker .calender td.month-day.disabled {
+  @apply text-zinc-600 hover:bg-transparent cursor-not-allowed !important;
+}
+
+.nepali-date-picker .calender td.month-day.today {
+  @apply text-zinc-100 !important;
+}
+
+.nepali-date-picker .calender td.month-day.today::before {
+  @apply bg-emerald-500 !important;
+}
+
+.nepali-date-picker .calender td.month-day.selected {
+  @apply text-zinc-950 font-bold !important;
+}
+
+.nepali-date-picker .calender td.month-day.selected::after {
+  @apply bg-emerald-500 !important;
+  height: 26px !important;
+  width: 26px !important;
+  border-radius: 50% !important;
+}
+
+.nepali-date-picker .calender table th {
+  @apply text-zinc-400 font-medium !important;
+  font-size: 11px !important;
+}
