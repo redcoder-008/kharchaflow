@@ -12,7 +12,7 @@ import {
   signInWithPhoneNumber,
   RecaptchaVerifier
 } from "firebase/auth";
-import { doc, setDoc, getDoc, deleteDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db, googleProvider, hasValidConfig } from "../../../backend/db/firebase";
 import { localDB } from "../../../backend/db/storage";
 
@@ -113,6 +113,11 @@ export function AuthProvider({ children }) {
           dateSystem,
           currency
         });
+
+        // Keep a server-side activity marker for accurate live admin metrics.
+        // This is intentionally non-blocking so a failed analytics write never blocks login.
+        setDoc(doc(db, "users", firebaseUser.uid), { lastActiveAt: serverTimestamp() }, { merge: true })
+          .catch((err) => console.error("Failed to record user activity: ", err));
       } else {
         setUser(null);
       }
@@ -184,6 +189,8 @@ export function AuthProvider({ children }) {
           displayName,
           budgets: localDB.getDefaultBudgets(),
           initialBalances: localDB.getDefaultInitialBalances(),
+          createdAt: serverTimestamp(),
+          lastActiveAt: serverTimestamp(),
           isAdmin: false
         });
 
@@ -222,6 +229,8 @@ export function AuthProvider({ children }) {
           displayName,
           budgets: localDB.getDefaultBudgets(),
           initialBalances: localDB.getDefaultInitialBalances(),
+          createdAt: serverTimestamp(),
+          lastActiveAt: serverTimestamp(),
           isAdmin: false
         });
 
@@ -289,6 +298,8 @@ export function AuthProvider({ children }) {
             displayName: result.user.displayName || "Fintech User",
             budgets: localDB.getDefaultBudgets(),
             initialBalances: localDB.getDefaultInitialBalances(),
+            createdAt: serverTimestamp(),
+            lastActiveAt: serverTimestamp(),
             isAdmin: false
           });
         }
@@ -325,6 +336,8 @@ export function AuthProvider({ children }) {
             displayName: result.user.displayName || "Fintech User",
             budgets: localDB.getDefaultBudgets(),
             initialBalances: localDB.getDefaultInitialBalances(),
+            createdAt: serverTimestamp(),
+            lastActiveAt: serverTimestamp(),
             isAdmin: false
           });
         }
@@ -543,6 +556,8 @@ export function AuthProvider({ children }) {
           phone: firebaseUser.phoneNumber || "",
           budgets: localDB.getDefaultBudgets(),
           initialBalances: localDB.getDefaultInitialBalances(),
+          createdAt: serverTimestamp(),
+          lastActiveAt: serverTimestamp(),
           isAdmin: false
         });
       }

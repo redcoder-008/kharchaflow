@@ -23,6 +23,11 @@ import { formatDate, formatMonth, formatCurrency } from "../utils/helpers";
 const fmt = (n) => formatCurrency(n, "INR");
 
 const fmtNum = (n) => new Intl.NumberFormat("en-IN").format(n ?? 0);
+const toDate = (value) => {
+  if (!value) return null;
+  const date = value?.toDate ? value.toDate() : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
 
 function StatCard({ icon: Icon, label, value, sub, color = "indigo", loading }) {
   const colors = {
@@ -108,7 +113,7 @@ export default function Admin() {
     let txByUser = {}; // uid -> tx[]
 
     const recompute = () => {
-      const allTx = Object.values(txByUser).flat();
+      const allTx = Object.values(txByUser).flat().filter((tx) => !tx.deletedAt);
       allTx.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
       const userLookup = new Map(
@@ -131,17 +136,17 @@ export default function Admin() {
       const totalIncome = enrichedTx.filter(t => t.type === "income").reduce((s, t) => s + Number(t.amount || 0), 0);
       const totalExpense = enrichedTx.filter(t => t.type === "expense").reduce((s, t) => s + Number(t.amount || 0), 0);
 
-      const activeUids = new Set(allTx.map(t => t.uid).filter(Boolean));
-
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const newUsersMonth = latestUsers.filter(u => {
-        if (!u.createdAt) return false;
-        const d = u.createdAt?.toDate ? u.createdAt.toDate() : new Date(u.createdAt);
-        return d >= startOfMonth;
-      }).length;
-
       const last30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const newUsersMonth = latestUsers.filter(u => {
+        const joinedAt = toDate(u.createdAt);
+        return joinedAt && joinedAt >= startOfMonth;
+      }).length;
+      const activeUsers = latestUsers.filter((u) => {
+        const lastActiveAt = toDate(u.lastActiveAt);
+        return !u.suspended && lastActiveAt && lastActiveAt >= last30;
+      }).length;
       const recentTxList = enrichedTx.filter(t => {
         const d = t.date ? new Date(t.date) : null;
         return d && d >= last30;
@@ -186,8 +191,8 @@ export default function Admin() {
         growthMap[key] = { month: key, users: 0 };
       }
       latestUsers.forEach(u => {
-        if (!u.createdAt) return;
-        const d = u.createdAt?.toDate ? u.createdAt.toDate() : new Date(u.createdAt);
+        const d = toDate(u.createdAt);
+        if (!d) return;
         const key = d.toISOString().slice(0, 7);
         if (growthMap[key]) growthMap[key].users += 1;
       });
@@ -202,7 +207,7 @@ export default function Admin() {
 
       setStats({
         totalUsers: latestUsers.length,
-        activeUsers: activeUids.size,
+        activeUsers,
         newUsersMonth,
         totalTx: enrichedTx.length,
         totalIncome,
@@ -342,10 +347,17 @@ export default function Admin() {
           {/* Stat Cards */}
           <div>
             <SectionHeader title="Key Metrics" icon={Activity} />
+            {!loading && stats?.newUsersMonth > 0 && (
+              <div className="mb-4 flex items-center gap-3 rounded-2xl border border-violet-500/25 bg-violet-500/10 px-4 py-3 text-violet-200">
+                <span className="text-xl animate-bounce" aria-hidden="true">🎉</span>
+                <p className="text-xs font-semibold"><span className="text-violet-300 font-bold">+{fmtNum(stats.newUsersMonth)}</span> new {stats.newUsersMonth === 1 ? "user has" : "users have"} joined this month.</p>
+                <span className="ml-auto text-sm animate-pulse" aria-hidden="true">✨</span>
+              </div>
+            )}
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-4">
               <StatCard icon={Users} label="Total Users" value={fmtNum(stats?.totalUsers)} color="indigo" loading={loading} />
-              <StatCard icon={UserCheck} label="Active Users" value={fmtNum(stats?.activeUsers)} sub="ever transacted" color="emerald" loading={loading} />
-              <StatCard icon={Star} label="New This Month" value={fmtNum(stats?.newUsersMonth)} color="violet" loading={loading} />
+              <StatCard icon={UserCheck} label="Active Users" value={fmtNum(stats?.activeUsers)} sub="active in the last 30 days" color="emerald" loading={loading} />
+              <StatCard icon={Star} label="New This Month" value={fmtNum(stats?.newUsersMonth)} sub={stats?.newUsersMonth ? `+${fmtNum(stats.newUsersMonth)} joined` : "No new users yet"} color="violet" loading={loading} />
               <StatCard icon={CreditCard} label="Total Transactions" value={fmtNum(stats?.totalTx)} color="sky" loading={loading} />
               <StatCard icon={Clock} label="Last 30d Tx" value={fmtNum(stats?.recentTxCount)} color="amber" loading={loading} />
             </div>
