@@ -27,11 +27,13 @@ import {
   Tooltip,
 } from "recharts";
 import AddTransactionModal from "../components/transactions/AddTransactionModal";
+import { useFeedback } from "../context/FeedbackContext";
 
 export default function Dashboard() {
   const { transactions, totals, currentBalances, deleteTransaction } =
     useFinance();
   const { dateSystem } = useCalendar();
+  const { confirm } = useFeedback();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [defaultType, setDefaultType] = useState("expense");
   const [expandedSource, setExpandedSource] = useState(null); // 'bank', 'wallet', 'mobile' or null
@@ -676,12 +678,8 @@ export default function Dashboard() {
 
                         {/* Quick Delete */}
                         <button
-                          onClick={() => {
-                            if (
-                              confirm(
-                                "Move this transaction to the Recycle Bin? You can restore it later from History.",
-                              )
-                            ) {
+                          onClick={async () => {
+                            if (await confirm({ title: "Move to Recycle Bin?", message: "You can restore this transaction later from History.", confirmLabel: "Move to Bin", tone: "danger" })) {
                               deleteTransaction(tx.id);
                             }
                           }}

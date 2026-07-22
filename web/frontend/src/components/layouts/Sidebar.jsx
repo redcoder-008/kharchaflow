@@ -11,10 +11,12 @@ import {
   UserCheck
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useFeedback } from "../../context/FeedbackContext";
 import UserAvatar from "../ui/UserAvatar";
 
 export default function Sidebar({ activePage, setActivePage }) {
   const { user, logout, isDemoMode } = useAuth();
+  const { confirm } = useFeedback();
 
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -102,7 +104,9 @@ export default function Sidebar({ activePage, setActivePage }) {
 
         {/* Logout Action */}
         <button
-          onClick={logout}
+          onClick={async () => {
+            if (await confirm({ title: "Log out?", message: "You can sign back in at any time.", confirmLabel: "Log out", tone: "info" })) logout();
+          }}
           className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium text-rose-400/90 hover:bg-rose-500/5 hover:text-rose-400 border border-transparent hover:border-rose-500/10 transition-all duration-150"
         >
           <LogOut className="w-5 h-5 stroke-[1.8]" />

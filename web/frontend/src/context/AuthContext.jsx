@@ -15,6 +15,7 @@ import {
 import { doc, setDoc, getDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db, googleProvider, hasValidConfig } from "../../../backend/db/firebase";
 import { localDB } from "../../../backend/db/storage";
+import { useFeedback } from "./FeedbackContext";
 
 const AuthContext = createContext();
 
@@ -23,6 +24,7 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }) {
+  const { notify } = useFeedback();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -465,7 +467,7 @@ export function AuthProvider({ children }) {
 
   const toggleDemoMode = (val) => {
     if (!hasValidConfig && !val) {
-      alert("No valid Firebase credentials configured. Setup your Firebase keys in settings first.");
+      notify("No valid Firebase credentials are configured. Add your Firebase keys in Settings first.", "danger");
       return;
     }
     localDB.setIsDemoMode(val);

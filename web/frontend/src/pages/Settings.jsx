@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useFinance } from "../context/FinanceContext";
 import { useCalendar } from "../context/CalendarContext";
+import { useFeedback } from "../context/FeedbackContext";
 import { db, reloadFirebaseApp } from "../../../backend/db/firebase";
 import { localDB } from "../../../backend/db/storage";
 import { CATEGORIES } from "../utils/constants";
@@ -34,6 +35,7 @@ export default function Settings() {
   const { user, isDemoMode, logout, updateUserProfile, updateUserPassword, deleteUserAccount } = useAuth();
   const { budgets, updateBudgets, bankAccounts, addBankAccount, updateBankAccount, deleteBankAccount, categories, addCategory, updateCategory, deleteCategory, toggleDefaultCategory } = useFinance();
   const { dateSystem, setDateSystem } = useCalendar();
+  const { confirm, notify } = useFeedback();
   const [dateSystemSaving, setDateSystemSaving] = useState(false);
   const [currencySaving, setCurrencySaving] = useState(false);
   const [preferredCurrency, setPreferredCurrency] = useState(() => localStorage.getItem("kharchaflow_currency") || "INR");
@@ -182,7 +184,7 @@ export default function Settings() {
       await setDateSystem(nextDateSystem);
     } catch (err) {
       console.error("Date system update error:", err);
-      alert("Unable to save the date system preference.");
+      notify("Unable to save the date system preference. Please try again.", "danger");
     } finally {
       setDateSystemSaving(false);
     }
@@ -196,7 +198,7 @@ export default function Settings() {
       localStorage.setItem("kharchaflow_currency", nextCurrency);
     } catch (err) {
       console.error("Currency update error:", err);
-      alert("Unable to save the currency preference.");
+      notify("Unable to save the currency preference. Please try again.", "danger");
     } finally {
       setCurrencySaving(false);
     }
@@ -315,11 +317,12 @@ export default function Settings() {
   };
 
   const handleDeleteAccount = async () => {
-    if (confirm("Are you absolutely sure you want to delete your account? This action cannot be undone and will permanently erase your data.")) {
+    const confirmed = await confirm({ title: "Delete your account?", message: "This permanently removes your profile and data. This action cannot be undone.", confirmLabel: "Delete account", tone: "danger" });
+    if (confirmed) {
       try {
         await deleteUserAccount();
       } catch (err) {
-        alert("Failed to delete account. You may need to log out and log back in first.");
+        notify("Failed to delete your account. Please log in again and retry.", "danger");
       }
     }
   };
@@ -372,7 +375,7 @@ export default function Settings() {
   };
 
   const handleDeleteBankAccount = async (id) => {
-    if (!confirm("Delete this bank account from your list?")) return;
+    if (!await confirm({ title: "Delete bank account?", message: "This removes the account from your available payment sources.", confirmLabel: "Delete account", tone: "danger" })) return;
     try {
       await deleteBankAccount(id);
       if (editingBankAccountId === id) resetBankAccountForm();
@@ -426,7 +429,7 @@ export default function Settings() {
   };
 
   const handleDeleteCategory = async (id) => {
-    if (!confirm("Delete this custom category from your list?")) return;
+    if (!await confirm({ title: "Delete category?", message: "Existing transactions will keep this category, but it will no longer be available for new expenses.", confirmLabel: "Delete category", tone: "danger" })) return;
     try {
       await deleteCategory(id);
       if (editingCategoryId === id) resetCategoryForm();
@@ -470,7 +473,7 @@ export default function Settings() {
     setConfigSuccess(false);
 
     if (!apiKey.trim() || !projectId.trim()) {
-      alert("API Key and Project ID are minimum fields required for database sync.");
+      notify("Enter both an API key and project ID to enable database sync.", "danger");
       return;
     }
 
@@ -493,8 +496,8 @@ export default function Settings() {
     }, 1000);
   };
 
-  const handleResetToDemo = () => {
-    if (confirm("Disconnecting your database keys will switch you back to offline LocalStorage mode. Continue?")) {
+  const handleResetToDemo = async () => {
+    if (await confirm({ title: "Disconnect cloud sync?", message: "You will switch back to offline browser storage on this device.", confirmLabel: "Disconnect", tone: "danger" })) {
       localDB.saveFirebaseConfig(null);
       localDB.setIsDemoMode(true);
       localStorage.removeItem("kharchaflow_demo_active_user");
@@ -1178,7 +1181,9 @@ export default function Settings() {
             </p>
             <div className="flex flex-col gap-3">
               <button
-                onClick={logout}
+                onClick={async () => {
+                  if (await confirm({ title: "Log out?", message: "You can sign back in at any time.", confirmLabel: "Log out", tone: "info" })) logout();
+                }}
                 className="w-full bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-zinc-300 border border-zinc-800 hover:border-zinc-700 font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs transition-all"
               >
                 <LogOut className="w-3.5 h-3.5" />

@@ -17,6 +17,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
 import { useCalendar } from "../context/CalendarContext";
+import { useFeedback } from "../context/FeedbackContext";
 import { formatDate, formatMonth, formatCurrency } from "../utils/helpers";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -91,6 +92,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 export default function Admin() {
   const { user } = useAuth();
   const { dateSystem } = useCalendar();
+  const { confirm, notify } = useFeedback();
   const [activeTab, setActiveTab] = useState("overview");
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
@@ -251,6 +253,7 @@ export default function Admin() {
           recompute();
         }, (err) => {
           console.error(`Admin: tx listener error for ${u.uid}:`, err);
+          notify("Some transaction data could not be loaded. Check Firestore permissions.", "danger");
         });
         unsubscribers.push(txUnsub);
       });
@@ -258,6 +261,7 @@ export default function Admin() {
       recompute();
     }, (err) => {
       console.error("Admin: users listener error:", err);
+      notify("Unable to load live admin data. Check your Firestore permissions and connection.", "danger");
       setLoading(false);
     });
     unsubscribers.push(usersUnsub);
@@ -265,7 +269,7 @@ export default function Admin() {
     return () => {
       unsubscribers.forEach(fn => fn());
     };
-  }, [dateSystem]);
+  }, [dateSystem, notify]);
 
   // Manual refresh (just a visual indicator since data is already live)
   const handleRefresh = () => {
@@ -277,9 +281,10 @@ export default function Admin() {
   const toggleSuspend = (uid) => {
     setUsers(prev => prev.map(u => u.uid === uid ? { ...u, suspended: !u.suspended } : u));
   };
-  const removeUser = (uid) => {
-    if (!window.confirm("Delete this user? This cannot be undone.")) return;
+  const removeUser = async (uid) => {
+    if (!await confirm({ title: "Delete user?", message: "This action cannot be undone. User data may require a server-side cleanup as well.", confirmLabel: "Delete user", tone: "danger" })) return;
     setUsers(prev => prev.filter(u => u.uid !== uid));
+    notify("The user was removed from this view. Configure a server-side admin action to delete their authentication account.", "info");
   };
 
   // ── Filtered / paginated users ────────────────────────────────────────────

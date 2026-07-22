@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { FinanceProvider, useFinance } from "./context/FinanceContext";
 import { CalendarProvider } from "./context/CalendarContext";
+import { FeedbackProvider } from "./context/FeedbackContext";
 import Sidebar from "./components/layouts/Sidebar";
 import BottomNav from "./components/layouts/BottomNav";
 import Header from "./components/layouts/Header";
@@ -13,6 +14,7 @@ import Goals from "./pages/Goals";
 import Settings from "./pages/Settings";
 import Admin from "./pages/Admin";
 import AddTransactionModal from "./components/transactions/AddTransactionModal";
+import PageSkeleton from "./components/ui/PageSkeleton";
   import { TrendingUp, Download, X } from "lucide-react";
 
 
@@ -110,10 +112,7 @@ function AppContent() {
   const renderPage = () => {
     if (financeLoading) {
       return (
-        <div className="h-[60vh] flex flex-col items-center justify-center gap-3">
-          <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-xs font-bold text-zinc-500 tracking-wider uppercase">Loading database records...</span>
-        </div>
+        <PageSkeleton />
       );
     }
 
@@ -208,12 +207,14 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <CalendarProvider>
-        <FinanceProvider>
-          <AppContent />
-        </FinanceProvider>
-      </CalendarProvider>
-    </AuthProvider>
+    <FeedbackProvider>
+      <AuthProvider>
+        <CalendarProvider>
+          <FinanceProvider>
+            <AppContent />
+          </FinanceProvider>
+        </CalendarProvider>
+      </AuthProvider>
+    </FeedbackProvider>
   );
 }

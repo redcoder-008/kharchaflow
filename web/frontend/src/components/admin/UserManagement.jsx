@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Users, Edit, Trash2, Ban, CheckCircle, XCircle } from "lucide-react";
+import { useFeedback } from "../../context/FeedbackContext";
 
 // Mock user data – replace with real API call later
 const mockUsers = [
@@ -10,6 +11,7 @@ const mockUsers = [
 
 export default function UserManagement() {
   const [users, setUsers] = useState(mockUsers);
+  const { confirm } = useFeedback();
 
   const toggleStatus = (id) => {
     setUsers((prev) =>
@@ -21,8 +23,8 @@ export default function UserManagement() {
     );
   };
 
-  const deleteUser = (id) => {
-    if (window.confirm("Delete this user permanently?")) {
+  const deleteUser = async (id) => {
+    if (await confirm({ title: "Delete user?", message: "This mock user will be removed from the list.", confirmLabel: "Delete user", tone: "danger" })) {
       setUsers((prev) => prev.filter((u) => u.id !== id));
     }
   };

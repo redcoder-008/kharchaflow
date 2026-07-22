@@ -8,9 +8,11 @@ import {
   Plus
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useFeedback } from "../../context/FeedbackContext";
 
 export default function BottomNav({ activePage, setActivePage, onQuickAddClick }) {
   const { user, logout } = useAuth();
+  const { confirm } = useFeedback();
 
   const menuItems = [
     { id: "dashboard", label: "Overview", icon: LayoutDashboard },
@@ -59,7 +61,10 @@ export default function BottomNav({ activePage, setActivePage, onQuickAddClick }
           return (
             <button
               key={item.id}
-              onClick={() => item.action === "logout" ? logout() : setActivePage(item.id)}
+              onClick={async () => {
+                if (item.action !== "logout") return setActivePage(item.id);
+                if (await confirm({ title: "Log out?", message: "You can sign back in at any time.", confirmLabel: "Log out", tone: "info" })) logout();
+              }}
               className="flex flex-col items-center justify-center gap-0.5 h-full py-2 text-center"
             >
               <Icon className={`w-5 h-5 transition-all ${

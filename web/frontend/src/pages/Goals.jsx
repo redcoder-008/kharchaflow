@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useFinance } from "../context/FinanceContext";
 import { useCalendar } from "../context/CalendarContext";
+import { useFeedback } from "../context/FeedbackContext";
 import { formatCurrency, formatDate } from "../utils/helpers";
 import { AlertCircle, CheckCircle2, Pencil, Plus, Target, Trash2, WalletCards, X } from "lucide-react";
 
@@ -9,6 +10,7 @@ const blankGoal = { name: "", targetAmount: "", currentAmount: "", targetDate: "
 export default function Goals() {
   const { financialGoals, saveFinancialGoals } = useFinance();
   const { dateSystem } = useCalendar();
+  const { confirm, notify } = useFeedback();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [form, setForm] = useState(blankGoal);
   const [editingId, setEditingId] = useState(null);
@@ -76,8 +78,12 @@ export default function Goals() {
   };
 
   const deleteGoal = async (id) => {
-    if (!confirm("Delete this financial goal?")) return;
-    await saveFinancialGoals(financialGoals.filter((goal) => goal.id !== id));
+    if (!await confirm({ title: "Delete financial goal?", message: "This goal and its progress will be removed permanently.", confirmLabel: "Delete goal", tone: "danger" })) return;
+    try {
+      await saveFinancialGoals(financialGoals.filter((goal) => goal.id !== id));
+    } catch {
+      notify("Unable to delete this goal. Please try again.", "danger");
+    }
   };
 
   return (

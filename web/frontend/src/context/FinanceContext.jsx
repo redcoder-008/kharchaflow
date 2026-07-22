@@ -3,6 +3,7 @@ import { useAuth } from "./AuthContext";
 import { localDB } from "../../../backend/db/storage";
 import { db } from "../../../backend/db/firebase";
 import { CATEGORIES } from "../utils/constants";
+import { useFeedback } from "./FeedbackContext";
 import { 
   collection, 
   query, 
@@ -24,6 +25,7 @@ export function useFinance() {
 
 export function FinanceProvider({ children }) {
   const { user, isDemoMode } = useAuth();
+  const { notify } = useFeedback();
   
   const [transactions, setTransactions] = useState([]);
   const [deletedTransactions, setDeletedTransactions] = useState([]);
@@ -115,6 +117,8 @@ export function FinanceProvider({ children }) {
       setPendingTx(snapshot.metadata.hasPendingWrites);
     }, (err) => {
       console.error("Firestore transactions error: ", err);
+      notify("We couldn't load your transactions. Check your connection and try again.", "danger");
+      setLoading(false);
     });
 
     // 2. Unified User Document Listener (Budgets & Initial Balances)
@@ -149,6 +153,7 @@ export function FinanceProvider({ children }) {
       setLoading(false);
     }, (err) => {
       console.error("Firestore user doc error: ", err);
+      notify("We couldn't load your account settings. Please refresh and try again.", "danger");
       setLoading(false);
     });
 
@@ -156,7 +161,7 @@ export function FinanceProvider({ children }) {
       unsubscribeTx();
       unsubscribeUserDoc();
     };
-  }, [user, isDemoMode]);
+  }, [user, isDemoMode, notify]);
 
   // Operations
   const addTransaction = async (txData) => {

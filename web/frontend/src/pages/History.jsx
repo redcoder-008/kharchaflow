@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { jsPDF } from "jspdf";
 import { useFinance } from "../context/FinanceContext";
 import { useCalendar } from "../context/CalendarContext";
+import { useFeedback } from "../context/FeedbackContext";
 import { formatCurrency, formatDate } from "../utils/helpers";
 import { CATEGORIES, PAYMENT_METHODS } from "../utils/constants";
 import { 
@@ -23,6 +24,7 @@ const pdfSafeText = (value) => String(value ?? "").replace(/[^\x20-\x7E]/g, "?")
 export default function History() {
   const { transactions, deletedTransactions, deleteTransaction, restoreTransaction, permanentlyDeleteTransaction } = useFinance();
   const { dateSystem } = useCalendar();
+  const { confirm } = useFeedback();
   
   // Filters & Search State
   const [search, setSearch] = useState("");
@@ -229,7 +231,7 @@ export default function History() {
                       <button onClick={() => restoreTransaction(tx.id)} className="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-[10px] font-bold flex items-center gap-1.5 transition-colors">
                         <RotateCcw className="w-3.5 h-3.5" /> Restore
                       </button>
-                      <button onClick={() => { if (window.confirm("Permanently delete this transaction? This cannot be undone.")) permanentlyDeleteTransaction(tx.id); }} className="px-3 py-2 rounded-xl bg-zinc-950 border border-rose-500/30 hover:bg-rose-500/10 text-rose-400 text-[10px] font-bold flex items-center gap-1.5 transition-colors">
+                      <button onClick={async () => { if (await confirm({ title: "Delete transaction forever?", message: "This transaction cannot be restored after permanent deletion.", confirmLabel: "Delete forever", tone: "danger" })) permanentlyDeleteTransaction(tx.id); }} className="px-3 py-2 rounded-xl bg-zinc-950 border border-rose-500/30 hover:bg-rose-500/10 text-rose-400 text-[10px] font-bold flex items-center gap-1.5 transition-colors">
                         <Trash2 className="w-3.5 h-3.5" /> Delete forever
                       </button>
                     </div>
