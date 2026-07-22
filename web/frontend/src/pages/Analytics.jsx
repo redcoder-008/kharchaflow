@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFinance } from "../context/FinanceContext";
 import { useCalendar } from "../context/CalendarContext";
 import { formatCurrency, formatMonth, formatWeekday } from "../utils/helpers";
@@ -6,7 +6,11 @@ import { CATEGORIES } from "../utils/constants";
 import { 
   AreaChart, 
   Area, 
+  BarChart,
+  Bar,
   XAxis, 
+  YAxis,
+  CartesianGrid,
   Tooltip, 
   ResponsiveContainer 
 } from "recharts";
@@ -21,23 +25,48 @@ import {
 export default function Analytics() {
   const { transactions, budgets } = useFinance();
   const { dateSystem } = useCalendar();
+  const [selectedMonth, setSelectedMonth] = useState("");
 
-  // 1. Last 7 Days Spending Data for AreaChart
+  const availableMonths = useMemo(() => [...new Set(
+    transactions.filter((tx) => /^\d{4}-\d{2}/.test(tx.date || "")).map((tx) => tx.date.slice(0, 7))
+  )].sort((a, b) => b.localeCompare(a)), [transactions]);
+
+  const activeMonth = selectedMonth || availableMonths[0] || new Date().toISOString().slice(0, 7);
+
+  useEffect(() => {
+    if (!selectedMonth && availableMonths[0]) setSelectedMonth(availableMonths[0]);
+  }, [availableMonths, selectedMonth]);
+
+  const selectedTransactions = useMemo(() => transactions.filter((tx) => tx.date?.startsWith(activeMonth)), [transactions, activeMonth]);
+
+  const monthlyTotals = useMemo(() => selectedTransactions.reduce((totals, tx) => {
+    const amount = Number(tx.amount) || 0;
+    if (tx.type === "income") totals.income += amount;
+    if (tx.type === "expense") totals.expense += amount;
+    return totals;
+  }, { income: 0, expense: 0 }), [selectedTransactions]);
+
+  const categoryBreakdown = useMemo(() => {
+    const totals = {};
+    selectedTransactions.filter((tx) => tx.type === "expense").forEach((tx) => {
+      const category = tx.category || "Others";
+      totals[category] = (totals[category] || 0) + (Number(tx.amount) || 0);
+    });
+    return Object.entries(totals).map(([name, amount]) => ({ name, amount })).sort((a, b) => b.amount - a.amount);
+  }, [selectedTransactions]);
+
+  // 1. Daily spending for the selected month
   const dailySpendData = useMemo(() => {
     const list = [];
-    const now = new Date();
-
-    // Setup past 7 days
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(now.getDate() - i);
-      const dateStr = d.toISOString().split("T")[0]; // YYYY-MM-DD
+    const [year, month] = activeMonth.split("-").map(Number);
+    const daysInMonth = new Date(year, month, 0).getDate();
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${activeMonth}-${String(day).padStart(2, "0")}`;
       const label = formatWeekday(dateStr, dateSystem);
       list.push({ date: dateStr, name: label, amount: 0 });
     }
 
-    // Accumulate expenses
-    transactions.forEach((tx) => {
+    selectedTransactions.forEach((tx) => {
       if (tx.type === "expense") {
         const match = list.find((item) => item.date === tx.date);
         if (match) {
@@ -47,16 +76,15 @@ export default function Analytics() {
     });
 
     return list;
-  }, [transactions]);
+  }, [selectedTransactions, activeMonth, dateSystem]);
 
   // 2. Budget Utilization Calculations for Current Month
   const budgetUtilization = useMemo(() => {
-    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
     const categoryExpenses = {};
 
     // Sum actual expenses for current month
-    transactions.forEach((tx) => {
-      if (tx.type === "expense" && tx.date.startsWith(currentMonth)) {
+    selectedTransactions.forEach((tx) => {
+      if (tx.type === "expense") {
         const cat = tx.category || "Others";
         categoryExpenses[cat] = (categoryExpenses[cat] || 0) + Number(tx.amount);
       }
@@ -80,14 +108,14 @@ export default function Analytics() {
         };
       })
       .sort((a, b) => b.percentage - a.percentage); // Category closest to budget breach first
-  }, [transactions, budgets]);
+  }, [selectedTransactions, budgets]);
 
   // 3. Spending Breakdown by Payment Source
   const methodSpending = useMemo(() => {
     const methodTotals = {};
     let totalExpense = 0;
 
-    transactions.forEach((tx) => {
+    selectedTransactions.forEach((tx) => {
       if (tx.type === "expense") {
         const method = tx.paymentMethod || "Cash";
         const amt = Number(tx.amount) || 0;
@@ -100,10 +128,10 @@ export default function Analytics() {
       const pct = totalExpense > 0 ? Math.round((value / totalExpense) * 100) : 0;
       return { name, value, pct };
     }).sort((a, b) => b.value - a.value);
-  }, [transactions]);
+  }, [selectedTransactions]);
 
   // Quick total summary for header
-  const totalWeeklySpend = useMemo(() => {
+  const totalMonthlySpend = useMemo(() => {
     return dailySpendData.reduce((acc, item) => acc + item.amount, 0);
   }, [dailySpendData]);
 
@@ -160,6 +188,21 @@ export default function Analytics() {
 
   return (
     <div className="space-y-6 pb-20 md:pb-8">
+      <div className="finance-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h3 className="text-sm font-bold text-white uppercase tracking-tight">Monthly Analytics</h3>
+          <p className="text-xs text-zinc-500 mt-1">Choose a month from your transaction history to review its financial activity.</p>
+        </div>
+        <select value={activeMonth} onChange={(event) => setSelectedMonth(event.target.value)} className="finance-input sm:w-52 py-2.5 text-xs font-bold" aria-label="Select analytics month">
+          {availableMonths.length === 0 ? <option value={activeMonth}>{formatMonth(`${activeMonth}-01`, dateSystem)}</option> : availableMonths.map((month) => <option key={month} value={month}>{formatMonth(`${month}-01`, dateSystem)}</option>)}
+        </select>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="finance-card"><p className="text-[10px] uppercase tracking-wider font-bold text-zinc-500">Total Income</p><p className="mt-2 text-xl font-bold text-emerald-400">{formatCurrency(monthlyTotals.income)}</p></div>
+        <div className="finance-card"><p className="text-[10px] uppercase tracking-wider font-bold text-zinc-500">Total Expenses</p><p className="mt-2 text-xl font-bold text-rose-400">{formatCurrency(monthlyTotals.expense)}</p></div>
+        <div className="finance-card"><p className="text-[10px] uppercase tracking-wider font-bold text-zinc-500">Net Savings</p><p className={`mt-2 text-xl font-bold ${monthlyTotals.income - monthlyTotals.expense >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{formatCurrency(monthlyTotals.income - monthlyTotals.expense)}</p></div>
+      </div>
       
       {/* 1. Header Trend Area */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -168,9 +211,9 @@ export default function Analytics() {
         <div className="finance-card lg:col-span-2">
           <div className="flex items-center justify-between border-b border-zinc-800/60 pb-3.5 mb-4">
             <div>
-              <h4 className="text-xs font-bold text-white tracking-tight uppercase">Daily Spending (Last 7 Days)</h4>
+              <h4 className="text-xs font-bold text-white tracking-tight uppercase">Daily Spending — {formatMonth(`${activeMonth}-01`, dateSystem)}</h4>
               <p className="text-xs text-zinc-500 font-medium mt-0.5">
-                Total weekly volume: <span className="text-emerald-400 font-bold">{formatCurrency(totalWeeklySpend)}</span>
+                Total monthly spending: <span className="text-emerald-400 font-bold">{formatCurrency(totalMonthlySpend)}</span>
               </p>
             </div>
             <TrendingDown className="w-5 h-5 text-rose-400" />
@@ -238,6 +281,20 @@ export default function Analytics() {
             </span>
           </div>
         </div>
+      </div>
+
+      <div className="finance-card">
+        <div className="flex items-center justify-between border-b border-zinc-800/60 pb-3.5 mb-4">
+          <div><h4 className="text-xs font-bold text-white tracking-tight uppercase">Expense Categories</h4><p className="text-xs text-zinc-500 mt-0.5">Category-wise expense breakdown for the selected month.</p></div>
+          <Coins className="w-5 h-5 text-emerald-400" />
+        </div>
+        {categoryBreakdown.length === 0 ? (
+          <div className="py-12 text-center text-xs text-zinc-500">No expense categories recorded for this month.</div>
+        ) : (
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%"><BarChart data={categoryBreakdown} layout="vertical" margin={{ left: 8, right: 16 }}><CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} /><XAxis type="number" tick={{ fill: "#71717a", fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(value) => formatCurrency(value)} /><YAxis type="category" dataKey="name" width={92} tick={{ fill: "#a1a1aa", fontSize: 11 }} tickLine={false} axisLine={false} /><Tooltip formatter={(value) => formatCurrency(value)} contentStyle={{ background: "#18181b", border: "1px solid #27272a", borderRadius: "12px", fontSize: "12px" }} /><Bar dataKey="amount" name="Expenses" fill="#10b981" radius={[0, 6, 6, 0]} /></BarChart></ResponsiveContainer>
+          </div>
+        )}
       </div>
 
       {/* 2. Monthly Financial Review */}
