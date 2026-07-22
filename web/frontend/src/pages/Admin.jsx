@@ -16,6 +16,8 @@ import {
   AreaChart, Area, BarChart, Bar, PieChart as RechartPie, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
+import { useCalendar } from "../context/CalendarContext";
+import { formatDate, formatMonth } from "../utils/helpers";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const fmt = (n) =>
@@ -84,6 +86,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 // ─── Main Component ─────────────────────────────────────────────────────────
 export default function Admin() {
   const { user } = useAuth();
+  const { dateSystem } = useCalendar();
   const [activeTab, setActiveTab] = useState("overview");
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
@@ -148,33 +151,38 @@ export default function Admin() {
       const monthlyMap = {};
       for (let i = 5; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const key = d.toLocaleString("default", { month: "short", year: "2-digit" });
+        const key = d.toISOString().slice(0, 7);
         monthlyMap[key] = { month: key, income: 0, expense: 0 };
       }
       allTx.forEach(t => {
         const d = t.date ? new Date(t.date) : null;
         if (!d) return;
-        const key = d.toLocaleString("default", { month: "short", year: "2-digit" });
+        const key = d.toISOString().slice(0, 7);
         if (monthlyMap[key]) {
           if (t.type === "income") monthlyMap[key].income += Number(t.amount || 0);
           else monthlyMap[key].expense += Number(t.amount || 0);
         }
       });
-      const monthlyTrend = Object.values(monthlyMap);
-
       const growthMap = {};
       for (let i = 5; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const key = d.toLocaleString("default", { month: "short", year: "2-digit" });
+        const key = d.toISOString().slice(0, 7);
         growthMap[key] = { month: key, users: 0 };
       }
       latestUsers.forEach(u => {
         if (!u.createdAt) return;
         const d = u.createdAt?.toDate ? u.createdAt.toDate() : new Date(u.createdAt);
-        const key = d.toLocaleString("default", { month: "short", year: "2-digit" });
+        const key = d.toISOString().slice(0, 7);
         if (growthMap[key]) growthMap[key].users += 1;
       });
-      const userGrowth = Object.values(growthMap);
+      const monthlyTrend = Object.entries(monthlyMap)
+        .map(([key, values]) => ({ ...values, monthLabel: formatMonth(`${key}-01`, dateSystem, true) }))
+        .sort((a, b) => a.month.localeCompare(b.month));
+
+      const userGrowth = Object.values(growthMap).map((item) => ({
+        ...item,
+        monthLabel: formatMonth(`${item.month}-01`, dateSystem, true)
+      }));
 
       setStats({
         totalUsers: latestUsers.length,
@@ -236,7 +244,7 @@ export default function Admin() {
     return () => {
       unsubscribers.forEach(fn => fn());
     };
-  }, []);
+  }, [dateSystem]);
 
   // Manual refresh (just a visual indicator since data is already live)
   const handleRefresh = () => {
@@ -441,7 +449,7 @@ export default function Admin() {
                         <td className={`py-2.5 text-right font-bold text-xs ${tx.type === "income" ? "text-emerald-400" : "text-rose-400"}`}>
                           {tx.type === "income" ? "+" : "-"}{fmt(tx.amount)}
                         </td>
-                        <td className="py-2.5 text-right text-zinc-500 text-xs">{tx.date ? new Date(tx.date).toLocaleDateString() : "—"}</td>
+                        <td className="py-2.5 text-right text-zinc-500 text-xs">{tx.date ? formatDate(tx.date, dateSystem) : "—"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -531,7 +539,7 @@ export default function Admin() {
                       </td>
                       <td className="p-4 text-xs text-zinc-500">
                         {u.createdAt
-                          ? (u.createdAt?.toDate ? u.createdAt.toDate() : new Date(u.createdAt)).toLocaleDateString()
+                          ? formatDate((u.createdAt?.toDate ? u.createdAt.toDate() : new Date(u.createdAt)).toISOString().slice(0, 10), dateSystem)
                           : "—"}
                       </td>
                       <td className="p-4 text-right space-x-1">
@@ -606,7 +614,7 @@ export default function Admin() {
                       <td className={`p-4 text-sm font-bold ${tx.type === "income" ? "text-emerald-400" : "text-rose-400"}`}>
                         {tx.type === "income" ? "+" : "-"}{fmt(tx.amount)}
                       </td>
-                      <td className="p-4 text-xs text-zinc-500">{tx.date ? new Date(tx.date).toLocaleDateString() : "—"}</td>
+                      <td className="p-4 text-xs text-zinc-500">{tx.date ? formatDate(tx.date, dateSystem) : "—"}</td>
                     </tr>
                   ))}
                 </tbody>

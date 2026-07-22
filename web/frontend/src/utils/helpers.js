@@ -45,6 +45,22 @@ export const formatDate = (dateString, dateSystem = "gregorian") => {
   });
 };
 
+export const formatWeekday = (dateString, dateSystem = "gregorian") => {
+  if (!dateString) return "";
+  const date = parseStoredDate(dateString);
+  if (isNaN(date.getTime())) return dateString;
+
+  if (dateSystem === "nepali") {
+    try {
+      return new NepaliDate(date).format("ddd");
+    } catch {
+      return date.toLocaleDateString("en-US", { weekday: "short" });
+    }
+  }
+
+  return date.toLocaleDateString("en-US", { weekday: "short" });
+};
+
 export const getMonthName = (dateString) => {
   if (!dateString) return "";
   const date = parseStoredDate(dateString);

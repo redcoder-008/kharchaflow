@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useFinance } from "../context/FinanceContext";
 import { useCalendar } from "../context/CalendarContext";
-import { formatCurrency, formatMonth } from "../utils/helpers";
+import { formatCurrency, formatMonth, formatWeekday } from "../utils/helpers";
 import { CATEGORIES } from "../utils/constants";
 import { 
   AreaChart, 
@@ -32,7 +32,7 @@ export default function Analytics() {
       const d = new Date();
       d.setDate(now.getDate() - i);
       const dateStr = d.toISOString().split("T")[0]; // YYYY-MM-DD
-      const label = d.toLocaleDateString("en-US", { weekday: "short" });
+      const label = formatWeekday(dateStr, dateSystem);
       list.push({ date: dateStr, name: label, amount: 0 });
     }
 

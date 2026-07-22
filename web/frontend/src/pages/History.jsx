@@ -102,7 +102,7 @@ export default function History() {
   const downloadCsv = () => {
     const headers = ["Date", "Type", "Category", "Payment Method", "Provider", "Amount", "Notes"];
     const rows = filteredTransactions.map((tx) => [
-      tx.date,
+      formatDate(tx.date, dateSystem),
       tx.type,
       tx.category,
       tx.paymentMethod,
@@ -133,7 +133,7 @@ export default function History() {
       doc.text("KharchaFlow Transaction Report", 14, y);
       doc.setFontSize(9);
       doc.setTextColor(82, 82, 91);
-      doc.text(`Generated ${new Date().toLocaleDateString("en-US")}`, pageWidth - 14, y, { align: "right" });
+      doc.text(`Generated ${formatDate(new Date().toISOString().slice(0, 10), dateSystem)}`, pageWidth - 14, y, { align: "right" });
       y += 7;
       if (showSummary) {
         doc.text(`Entries: ${filteredTransactions.length} | Income: ${formatCurrency(income)} | Expenses: ${formatCurrency(expenses)} | Net: ${formatCurrency(income - expenses)}`, 14, y);
@@ -166,7 +166,7 @@ export default function History() {
       }
       const isIncome = tx.type === "income";
       doc.setTextColor(63, 63, 70);
-      doc.text(pdfSafeText(tx.date), 14, y);
+      doc.text(pdfSafeText(formatDate(tx.date, dateSystem)), 14, y);
       doc.setTextColor(isIncome ? 5 : 190, isIncome ? 150 : 24, isIncome ? 105 : 93);
       doc.text(isIncome ? "Income" : "Expense", 42, y);
       doc.setTextColor(63, 63, 70);
