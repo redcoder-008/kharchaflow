@@ -10,6 +10,9 @@ import {
   TrendingUp,
   TrendingDown
 } from "lucide-react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { format } from "date-fns";
 
 export default function AddTransactionModal({ isOpen, onClose, editingTransaction, setActivePage, defaultType }) {
   const { addTransaction, editTransaction, currentBalances } = useFinance();
@@ -291,17 +294,29 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
           <div>
             <label htmlFor="date" className="finance-label">Transaction Date {dateSystem === "nepali" ? "(Bikram Sambat)" : ""}</label>
             <div className="relative">
-              <input
-                id="date"
-                type={dateSystem === "nepali" ? "text" : "date"}
-                inputMode={dateSystem === "nepali" ? "numeric" : undefined}
-                placeholder={dateSystem === "nepali" ? "2083-04-01" : undefined}
-                value={dateSystem === "nepali" ? nepaliDate : date}
-                onChange={(e) => dateSystem === "nepali" ? setNepaliDate(e.target.value) : setDate(e.target.value)}
-                required
-                className="finance-input pl-10"
-              />
-              <Calendar className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-zinc-500" />
+              {dateSystem === "nepali" ? (
+                <input
+                  id="date"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="2083-04-01"
+                  value={nepaliDate}
+                  onChange={(e) => setNepaliDate(e.target.value)}
+                  required
+                  className="finance-input pl-10"
+                />
+              ) : (
+                <DatePicker
+                  id="date"
+                  selected={date ? new Date(date) : null}
+                  onChange={(d) => setDate(d ? format(d, "yyyy-MM-dd") : "")}
+                  dateFormat="MMM d, yyyy"
+                  required
+                  className="finance-input pl-10 w-full"
+                  wrapperClassName="w-full"
+                />
+              )}
+              <Calendar className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-zinc-500 pointer-events-none" />
             </div>
             {dateSystem === "nepali" && <p className="mt-1.5 text-[10px] text-zinc-500">Enter the Nepali date as YYYY-MM-DD.</p>}
           </div>
