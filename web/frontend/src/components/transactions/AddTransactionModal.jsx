@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { NepaliDatePicker } from "nepali-datepicker-reactjs";
+import "nepali-datepicker-reactjs/dist/index.css";
 import { format } from "date-fns";
 
 export default function AddTransactionModal({ isOpen, onClose, editingTransaction, setActivePage, defaultType }) {
@@ -295,16 +297,15 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
             <label htmlFor="date" className="finance-label">Transaction Date {dateSystem === "nepali" ? "(Bikram Sambat)" : ""}</label>
             <div className="relative">
               {dateSystem === "nepali" ? (
-                <input
-                  id="date"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="2083-04-01"
-                  value={nepaliDate}
-                  onChange={(e) => setNepaliDate(e.target.value)}
-                  required
-                  className="finance-input pl-10"
-                />
+                <div className="w-full relative">
+                  <NepaliDatePicker
+                    inputClassName="finance-input pl-10 w-full"
+                    className="w-full"
+                    value={nepaliDate}
+                    onChange={(value) => setNepaliDate(value)}
+                    options={{ calenderLocale: "en", valueLocale: "en" }}
+                  />
+                </div>
               ) : (
                 <DatePicker
                   id="date"
@@ -314,6 +315,7 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
                   required
                   className="finance-input pl-10 w-full"
                   wrapperClassName="w-full"
+                  withPortal
                 />
               )}
               <Calendar className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-zinc-500 pointer-events-none" />
