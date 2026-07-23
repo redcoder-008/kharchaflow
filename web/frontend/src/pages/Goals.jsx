@@ -3,7 +3,7 @@ import { useFinance } from "../context/FinanceContext";
 import { useCalendar } from "../context/CalendarContext";
 import { useFeedback } from "../context/FeedbackContext";
 import { formatCurrency, formatDate } from "../utils/helpers";
-import { AlertCircle, CheckCircle2, Pencil, Plus, Target, Trash2, WalletCards, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, CirclePlus, Pencil, Plus, Target, Trash2, WalletCards, X } from "lucide-react";
 
 const blankGoal = { name: "", targetAmount: "", currentAmount: "", targetDate: "" };
 
@@ -16,6 +16,9 @@ export default function Goals() {
   const [editingId, setEditingId] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const [savingGoal, setSavingGoal] = useState(null);
+  const [savingAmount, setSavingAmount] = useState("");
+  const [savingError, setSavingError] = useState("");
 
   const summary = useMemo(() => financialGoals.reduce((totals, goal) => {
     totals.target += Number(goal.targetAmount) || 0;
@@ -86,6 +89,36 @@ export default function Goals() {
     }
   };
 
+  const closeAddSaving = () => {
+    setSavingGoal(null);
+    setSavingAmount("");
+    setSavingError("");
+  };
+
+  const addSaving = async (event) => {
+    event.preventDefault();
+    const amount = Number(savingAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setSavingError("Enter a saving amount greater than zero.");
+      return;
+    }
+    if (!savingGoal) return;
+
+    setIsSaving(true);
+    try {
+      const now = new Date().toISOString();
+      await saveFinancialGoals(financialGoals.map((goal) => goal.id === savingGoal.id
+        ? { ...goal, currentAmount: (Number(goal.currentAmount) || 0) + amount, updatedAt: now }
+        : goal));
+      notify(`${formatCurrency(amount)} added to ${savingGoal.name}.`, "success");
+      closeAddSaving();
+    } catch {
+      setSavingError("Your saving could not be added. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-6 pb-20 md:pb-8">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -152,6 +185,9 @@ export default function Goals() {
                     <div className="h-2 rounded-full overflow-hidden bg-zinc-900"><div className={`h-full rounded-full ${complete ? "bg-emerald-400" : "bg-indigo-500"}`} style={{ width: `${progress}%` }} /></div>
                     <div className="mt-2 flex justify-between text-[10px] font-bold"><span className={complete ? "text-emerald-400" : "text-zinc-400"}>{complete ? "Goal reached" : `${progress}% complete`}</span><span className="text-zinc-500">{formatCurrency(Math.max(0, target - saved))} remaining</span></div>
                   </div>
+                  <button onClick={() => { setSavingGoal(goal); setSavingAmount(""); setSavingError(""); }} className="w-full px-3 py-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-bold flex items-center justify-center gap-2 transition-colors">
+                    <CirclePlus className="w-4 h-4" /> Add Saving
+                  </button>
                 </div>
               );
             })}
@@ -169,6 +205,23 @@ export default function Goals() {
               <div className="grid grid-cols-2 gap-3"><div><label htmlFor="goal-target" className="text-xs font-semibold text-zinc-400">Target amount</label><input id="goal-target" type="number" min="0" step="any" value={form.targetAmount} onChange={(e) => setForm({ ...form, targetAmount: e.target.value })} placeholder="0.00" className="finance-input mt-1.5 py-2.5 text-sm" /></div><div><label htmlFor="goal-saved" className="text-xs font-semibold text-zinc-400">Saved so far</label><input id="goal-saved" type="number" min="0" step="any" value={form.currentAmount} onChange={(e) => setForm({ ...form, currentAmount: e.target.value })} placeholder="0.00" className="finance-input mt-1.5 py-2.5 text-sm" /></div></div>
               <div><label htmlFor="goal-date" className="text-xs font-semibold text-zinc-400">Target date <span className="text-zinc-600">(optional)</span></label><input id="goal-date" type="date" value={form.targetDate} onChange={(e) => setForm({ ...form, targetDate: e.target.value })} className="finance-input mt-1.5 py-2.5 text-sm" /></div>
               <div className="flex justify-end gap-3 pt-2"><button type="button" onClick={closeForm} className="px-4 py-2.5 text-xs font-bold text-zinc-400 hover:text-zinc-200">Cancel</button><button disabled={isSaving} type="submit" className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 text-zinc-950 text-xs font-bold">{isSaving ? "Saving..." : editingId ? "Save Changes" : "Create Goal"}</button></div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {savingGoal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-3xl bg-zinc-900 border border-zinc-800 shadow-2xl p-6">
+            <div className="flex justify-between items-center mb-2"><h3 className="text-base font-bold text-white">Add Saving</h3><button onClick={closeAddSaving} disabled={isSaving} className="text-zinc-500 hover:text-zinc-200 disabled:opacity-50" aria-label="Close add saving"><X className="w-5 h-5" /></button></div>
+            <p className="text-xs text-zinc-500 mb-5">Add a contribution to <span className="font-semibold text-zinc-300">{savingGoal.name}</span>. Its progress will update immediately.</p>
+            <form onSubmit={addSaving} className="space-y-4">
+              {savingError && <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex gap-2"><AlertCircle className="w-4 h-4 shrink-0" />{savingError}</div>}
+              <div>
+                <label htmlFor="saving-amount" className="text-xs font-semibold text-zinc-400">Saving amount</label>
+                <input id="saving-amount" type="number" min="0.01" step="any" value={savingAmount} onChange={(e) => setSavingAmount(e.target.value)} placeholder="0.00" className="finance-input mt-1.5 py-2.5 text-sm" autoFocus />
+              </div>
+              <div className="flex justify-end gap-3 pt-2"><button type="button" onClick={closeAddSaving} disabled={isSaving} className="px-4 py-2.5 text-xs font-bold text-zinc-400 hover:text-zinc-200 disabled:opacity-50">Cancel</button><button disabled={isSaving} type="submit" className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 text-zinc-950 text-xs font-bold">{isSaving ? "Adding..." : "Add Saving"}</button></div>
             </form>
           </div>
         </div>
