@@ -3,7 +3,7 @@ import { jsPDF } from "jspdf";
 import { useFinance } from "../context/FinanceContext";
 import { useCalendar } from "../context/CalendarContext";
 import { useFeedback } from "../context/FeedbackContext";
-import { formatCurrency, formatDate } from "../utils/helpers";
+import { formatCurrency, formatDate, getPreferredCurrency } from "../utils/helpers";
 import { CATEGORIES, PAYMENT_METHODS } from "../utils/constants";
 import { 
   Search, 
@@ -24,6 +24,24 @@ const PDF_CHART_COLORS = [
   [5, 150, 105], [14, 116, 144], [124, 58, 237], [217, 119, 6],
   [190, 24, 93], [22, 163, 74], [2, 132, 199], [147, 51, 234]
 ];
+// jsPDF's built-in fonts do not include currency glyphs such as ₹, which can render as ?.
+const formatPdfCurrency = (value) => {
+  const amount = Number(value) || 0;
+  return `${getPreferredCurrency()} ${new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount)}`;
+};
+const formatPdfChartAmount = (value) => {
+  const amount = Number(value) || 0;
+  const absolute = Math.abs(amount);
+  const compact = absolute >= 1000000
+    ? `${(amount / 1000000).toFixed(1)}M`
+    : absolute >= 1000
+      ? `${(amount / 1000).toFixed(1)}K`
+      : amount.toFixed(0);
+  return `${getPreferredCurrency()} ${compact}`;
+};
 
 export default function History() {
   const { transactions, deletedTransactions, deleteTransaction, restoreTransaction, permanentlyDeleteTransaction } = useFinance();
@@ -150,8 +168,8 @@ export default function History() {
     let y = 16;
 
     const drawCharts = () => {
-      const chartTop = 61;
-      const chartHeight = 76;
+      const chartTop = 65;
+      const chartHeight = 74;
       const barLeft = 18;
       const barWidth = 124;
       const pieCenterX = 218;
@@ -168,20 +186,30 @@ export default function History() {
       doc.setTextColor(113, 113, 122);
       doc.text(`Selected period: ${pdfSafeText(selectedPeriod)}`, barLeft, chartTop - 2);
 
-      doc.setDrawColor(228, 228, 231);
-      doc.rect(barLeft, chartTop, barWidth, chartHeight);
-      const rowHeight = chartHeight / Math.max(chartData.length, 1);
+      const chartBottom = chartTop + chartHeight;
+      const barChartPadding = 11;
+      const usableBarWidth = barWidth - (barChartPadding * 2);
+      const barGap = 4;
+      const barColumnWidth = Math.min(12, (usableBarWidth - (barGap * Math.max(chartData.length - 1, 0))) / Math.max(chartData.length, 1));
+      const usedBarWidth = (barColumnWidth * chartData.length) + (barGap * Math.max(chartData.length - 1, 0));
+      const firstBarX = barLeft + ((barWidth - usedBarWidth) / 2);
+      const maxBarHeight = chartHeight - 20;
+      doc.setDrawColor(212, 212, 216);
+      doc.setLineWidth(0.35);
+      doc.line(barLeft + 7, chartBottom - 10, barLeft + barWidth - 4, chartBottom - 10);
+      doc.line(barLeft + 7, chartTop + 3, barLeft + 7, chartBottom - 10);
       chartData.forEach((item, index) => {
         const color = PDF_CHART_COLORS[index % PDF_CHART_COLORS.length];
-        const labelY = chartTop + (index * rowHeight) + (rowHeight / 2) + 1;
-        const amountWidth = ((item.amount / maxAmount) * 67);
-        doc.setTextColor(63, 63, 70);
-        doc.setFontSize(6.5);
-        doc.text(pdfSafeText(item.label).slice(0, 21), barLeft + 2, labelY);
+        const height = Math.max((item.amount / maxAmount) * maxBarHeight, item.amount > 0 ? 1.5 : 0);
+        const x = firstBarX + (index * (barColumnWidth + barGap));
+        const y = chartBottom - 10 - height;
         doc.setFillColor(...color);
-        doc.roundedRect(barLeft + 48, labelY - 3, amountWidth, 5, 1, 1, "F");
+        doc.roundedRect(x, y, barColumnWidth, height, 1, 1, "F");
+        doc.setFontSize(6.5);
         doc.setTextColor(63, 63, 70);
-        doc.text(pdfSafeText(formatCurrency(item.amount)), barLeft + 120, labelY, { align: "right" });
+        doc.text(formatPdfChartAmount(item.amount), x + (barColumnWidth / 2), Math.max(y - 2, chartTop + 5), { align: "center" });
+        doc.setFontSize(6);
+        doc.text(String(index + 1), x + (barColumnWidth / 2), chartBottom - 4, { align: "center" });
       });
 
       let startAngle = -Math.PI / 2;
@@ -204,7 +232,7 @@ export default function History() {
       doc.setFontSize(7);
       doc.text("Total", pieCenterX, pieCenterY - 2, { align: "center" });
       doc.setFontSize(8);
-      doc.text(pdfSafeText(formatCurrency(totalAmount)), pieCenterX, pieCenterY + 3, { align: "center" });
+      doc.text(formatPdfChartAmount(totalAmount), pieCenterX, pieCenterY + 3, { align: "center" });
 
       const legendTop = 145;
       chartData.forEach((item, index) => {
@@ -218,7 +246,7 @@ export default function History() {
         doc.setTextColor(63, 63, 70);
         doc.setFontSize(6.5);
         const percentage = totalAmount ? Math.round((item.amount / totalAmount) * 100) : 0;
-        doc.text(`${pdfSafeText(item.label).slice(0, 17)} (${percentage}%)`, x + 6, legendY);
+        doc.text(`${index + 1}. ${pdfSafeText(item.label).slice(0, 15)} (${percentage}%)`, x + 6, legendY);
       });
       doc.setTextColor(113, 113, 122);
       doc.setFontSize(7);
@@ -234,7 +262,7 @@ export default function History() {
       doc.text(`Generated ${formatDate(new Date().toISOString().slice(0, 10), dateSystem)}`, pageWidth - 14, y, { align: "right" });
       y += 7;
       if (showSummary) {
-        doc.text(`Entries: ${filteredTransactions.length} | Income: ${formatCurrency(income)} | Expenses: ${formatCurrency(expenses)} | Net: ${formatCurrency(income - expenses)}`, 14, y);
+        doc.text(`Entries: ${filteredTransactions.length} | Income: ${formatPdfCurrency(income)} | Expenses: ${formatPdfCurrency(expenses)} | Net: ${formatPdfCurrency(income - expenses)}`, 14, y);
         y += 9;
       }
       doc.setDrawColor(212, 212, 216);
@@ -260,7 +288,7 @@ export default function History() {
     doc.setTextColor(82, 82, 91);
     doc.text(`Generated ${formatDate(new Date().toISOString().slice(0, 10), dateSystem)}`, pageWidth - 14, y, { align: "right" });
     y += 7;
-    doc.text(`Period: ${pdfSafeText(selectedPeriod)} | Entries: ${filteredTransactions.length} | Income: ${pdfSafeText(formatCurrency(income))} | Expenses: ${pdfSafeText(formatCurrency(expenses))} | Net: ${pdfSafeText(formatCurrency(income - expenses))}`, 14, y);
+    doc.text(`Period: ${pdfSafeText(selectedPeriod)} | Entries: ${filteredTransactions.length} | Income: ${formatPdfCurrency(income)} | Expenses: ${formatPdfCurrency(expenses)} | Net: ${formatPdfCurrency(income - expenses)}`, 14, y);
     y += 6;
     doc.setDrawColor(212, 212, 216);
     doc.line(14, y, pageWidth - 14, y);
@@ -287,7 +315,7 @@ export default function History() {
       doc.text(pdfSafeText(`${tx.paymentMethod}${tx.provider ? ` - ${tx.provider}` : ""}`).slice(0, 28), 100, y);
       doc.text(pdfSafeText(tx.notes || "No details").slice(0, 52), 148, y);
       doc.setTextColor(isIncome ? 5 : 190, isIncome ? 150 : 24, isIncome ? 105 : 93);
-      doc.text(`${isIncome ? "+" : "-"}${formatCurrency(tx.amount)}`, pageWidth - 14, y, { align: "right" });
+      doc.text(`${isIncome ? "+" : "-"}${formatPdfCurrency(tx.amount)}`, pageWidth - 14, y, { align: "right" });
       y += 7;
       if (index < filteredTransactions.length - 1) {
         doc.setDrawColor(244, 244, 245);
