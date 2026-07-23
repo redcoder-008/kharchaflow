@@ -5,7 +5,7 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  :root { 
     --color-white: 9 9 11;
     --color-black: 255 255 255;
     --zinc-50: 9 9 11;
