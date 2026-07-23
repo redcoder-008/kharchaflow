@@ -13,6 +13,8 @@ import {
   ChevronLeft,
   ShieldCheck,
   X,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 // ── Small inline Google SVG ──────────────────────────────────────────────────
@@ -73,6 +75,7 @@ export default function Auth() {
   // Email form
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [registrationPhone, setRegistrationPhone] = useState("");
 
@@ -423,7 +426,7 @@ export default function Auth() {
                 <div className="relative">
                   <input
                     id="password"
-                    type="password"
+                    type={isPasswordVisible ? "text" : "password"}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -431,6 +434,9 @@ export default function Auth() {
                     className="finance-input pl-10"
                   />
                   <Lock className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-zinc-500" />
+                  <button type="button" onClick={() => setIsPasswordVisible((visible) => !visible)} className="absolute right-3 top-3 text-zinc-500 hover:text-zinc-200 transition-colors" aria-label={isPasswordVisible ? "Hide password" : "Show password"}>
+                    {isPasswordVisible ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+                  </button>
                 </div>
               </div>
             )}

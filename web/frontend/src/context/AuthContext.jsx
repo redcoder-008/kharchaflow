@@ -144,9 +144,12 @@ export function AuthProvider({ children }) {
       setLoading(false);
       return userCredential.user;
     } catch (err) {
-      setError(err.message || "Invalid credentials. Please try again.");
+      const loginError = err.code === "auth/invalid-credential" || err.code === "auth/user-not-found" || err.code === "auth/wrong-password"
+        ? "Incorrect email or password."
+        : (err.message || "Unable to sign in. Please try again.");
+      setError(loginError);
       setLoading(false);
-      throw err;
+      throw new Error(loginError);
     }
   };
 
