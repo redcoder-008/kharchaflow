@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "676021776006",
+    "firebase_url": "https://kharchaflow-878a7-default-rtdb.firebaseio.com",
+    "project_id": "kharchaflow-878a7",
+    "storage_bucket": "kharchaflow-878a7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:676021776006:android:c26f2eafa5427306aa2b07",
+        "android_client_info": {
+          "package_name": "com.karan.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "676021776006-87jplmcmtdmae771n10bqbs74k655egc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCYzy2ztL8kuK1iEZgxfiNmFYXlMg3ovRs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "676021776006-87jplmcmtdmae771n10bqbs74k655egc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
