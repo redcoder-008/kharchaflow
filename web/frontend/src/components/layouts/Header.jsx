@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { 
   CloudLightning, 
   TrendingUp, 
@@ -18,6 +18,17 @@ export default function Header({ activePage, setActivePage }) {
   const { syncStatus } = useFinance();
   const { notifications, unreadCount, markAsRead, markAllAsRead, enablePush, pushStatus } = useNotifications();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const notificationMenuRef = useRef(null);
+
+  useEffect(() => {
+    const closeOnOutsideInteraction = (event) => {
+      if (notificationMenuRef.current && !notificationMenuRef.current.contains(event.target)) {
+        setIsNotificationOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", closeOnOutsideInteraction);
+    return () => document.removeEventListener("pointerdown", closeOnOutsideInteraction);
+  }, []);
 
   const getPageTitle = () => {
     switch (activePage) {
@@ -100,7 +111,7 @@ export default function Header({ activePage, setActivePage }) {
               </div>
             )}
 
-            <div className="relative">
+            <div ref={notificationMenuRef} className="relative">
               <button onClick={() => setIsNotificationOpen((open) => !open)} className="relative p-2.5 rounded-xl border border-zinc-800 bg-zinc-900 hover:border-zinc-700 text-zinc-300 hover:text-emerald-400 transition-colors" aria-label="Open notifications">
                 <Bell className="w-4 h-4" />
                 {unreadCount > 0 && <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-[9px] leading-4 text-white font-bold">{unreadCount > 99 ? "99+" : unreadCount}</span>}
