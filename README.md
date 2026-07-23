@@ -63,8 +63,8 @@ This project is licensed under the **MIT License**.
 <div align="center">
 
 ### ⭐ If you like KharchaFlow, don't forget to star the repository!
-
-Made with ❤️ by **Karan** & **Siddharth**
+ 
+Made with ❤️ by **Karan** & **Siddharth** <br> <br>
 ![Version](https://img.shields.io/badge/version-v1.0.0-blue)
 ![Status](https://img.shields.io/badge/status-Stable-success)
 
