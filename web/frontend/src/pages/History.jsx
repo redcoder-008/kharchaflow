@@ -20,6 +20,10 @@ import AddTransactionModal from "../components/transactions/AddTransactionModal"
 
 const escapeCsvValue = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
 const pdfSafeText = (value) => String(value ?? "").replace(/[^\x20-\x7E]/g, "?");
+const PDF_CHART_COLORS = [
+  [5, 150, 105], [14, 116, 144], [124, 58, 237], [217, 119, 6],
+  [190, 24, 93], [22, 163, 74], [2, 132, 199], [147, 51, 234]
+];
 
 export default function History() {
   const { transactions, deletedTransactions, deleteTransaction, restoreTransaction, permanentlyDeleteTransaction } = useFinance();
@@ -129,7 +133,97 @@ export default function History() {
     const income = filteredTransactions.filter((tx) => tx.type === "income").reduce((total, tx) => total + (Number(tx.amount) || 0), 0);
     const expenses = filteredTransactions.filter((tx) => tx.type === "expense").reduce((total, tx) => total + (Number(tx.amount) || 0), 0);
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const selectedPeriod = startDate || endDate
+      ? `${startDate ? formatDate(startDate, dateSystem) : "Beginning"} - ${endDate ? formatDate(endDate, dateSystem) : "Present"}`
+      : "All dates";
+    const categoryTotals = Object.values(filteredTransactions.reduce((groups, tx) => {
+      const amount = Number(tx.amount) || 0;
+      const label = `${tx.type === "income" ? "Income" : "Expense"}: ${tx.category || "Uncategorized"}`;
+      groups[label] = groups[label] || { label, amount: 0 };
+      groups[label].amount += amount;
+      return groups;
+    }, {})).sort((a, b) => b.amount - a.amount);
+    const chartData = categoryTotals.length > 8
+      ? [...categoryTotals.slice(0, 7), { label: "Other categories", amount: categoryTotals.slice(7).reduce((total, item) => total + item.amount, 0) }]
+      : categoryTotals;
     let y = 16;
+
+    const drawCharts = () => {
+      const chartTop = 61;
+      const chartHeight = 76;
+      const barLeft = 18;
+      const barWidth = 124;
+      const pieCenterX = 218;
+      const pieCenterY = 100;
+      const pieRadius = 31;
+      const totalAmount = chartData.reduce((total, item) => total + item.amount, 0);
+      const maxAmount = Math.max(...chartData.map((item) => item.amount), 1);
+
+      doc.setTextColor(24, 24, 27);
+      doc.setFontSize(12);
+      doc.text("Transaction amount by category", barLeft, chartTop - 7);
+      doc.text("Category share", pieCenterX, chartTop - 7, { align: "center" });
+      doc.setFontSize(7);
+      doc.setTextColor(113, 113, 122);
+      doc.text(`Selected period: ${pdfSafeText(selectedPeriod)}`, barLeft, chartTop - 2);
+
+      doc.setDrawColor(228, 228, 231);
+      doc.rect(barLeft, chartTop, barWidth, chartHeight);
+      const rowHeight = chartHeight / Math.max(chartData.length, 1);
+      chartData.forEach((item, index) => {
+        const color = PDF_CHART_COLORS[index % PDF_CHART_COLORS.length];
+        const labelY = chartTop + (index * rowHeight) + (rowHeight / 2) + 1;
+        const amountWidth = ((item.amount / maxAmount) * 67);
+        doc.setTextColor(63, 63, 70);
+        doc.setFontSize(6.5);
+        doc.text(pdfSafeText(item.label).slice(0, 21), barLeft + 2, labelY);
+        doc.setFillColor(...color);
+        doc.roundedRect(barLeft + 48, labelY - 3, amountWidth, 5, 1, 1, "F");
+        doc.setTextColor(63, 63, 70);
+        doc.text(pdfSafeText(formatCurrency(item.amount)), barLeft + 120, labelY, { align: "right" });
+      });
+
+      let startAngle = -Math.PI / 2;
+      chartData.forEach((item, index) => {
+        const angle = totalAmount ? (item.amount / totalAmount) * Math.PI * 2 : 0;
+        const color = PDF_CHART_COLORS[index % PDF_CHART_COLORS.length];
+        doc.setFillColor(...color);
+        doc.setDrawColor(255, 255, 255);
+        doc.setLineWidth(0.3);
+        doc.lines([
+          [pieRadius * Math.cos(startAngle), pieRadius * Math.sin(startAngle)],
+          [pieRadius * Math.cos(startAngle + angle) - pieRadius * Math.cos(startAngle), pieRadius * Math.sin(startAngle + angle) - pieRadius * Math.sin(startAngle)],
+          [-pieRadius * Math.cos(startAngle + angle), -pieRadius * Math.sin(startAngle + angle)]
+        ], pieCenterX, pieCenterY, [1, 1], "FD", true);
+        startAngle += angle;
+      });
+      doc.setFillColor(255, 255, 255);
+      doc.circle(pieCenterX, pieCenterY, 14, "F");
+      doc.setTextColor(63, 63, 70);
+      doc.setFontSize(7);
+      doc.text("Total", pieCenterX, pieCenterY - 2, { align: "center" });
+      doc.setFontSize(8);
+      doc.text(pdfSafeText(formatCurrency(totalAmount)), pieCenterX, pieCenterY + 3, { align: "center" });
+
+      const legendTop = 145;
+      chartData.forEach((item, index) => {
+        const column = index % 2;
+        const row = Math.floor(index / 2);
+        const x = 158 + (column * 67);
+        const legendY = legendTop + (row * 8);
+        const color = PDF_CHART_COLORS[index % PDF_CHART_COLORS.length];
+        doc.setFillColor(...color);
+        doc.roundedRect(x, legendY - 3, 4, 4, 0.5, 0.5, "F");
+        doc.setTextColor(63, 63, 70);
+        doc.setFontSize(6.5);
+        const percentage = totalAmount ? Math.round((item.amount / totalAmount) * 100) : 0;
+        doc.text(`${pdfSafeText(item.label).slice(0, 17)} (${percentage}%)`, x + 6, legendY);
+      });
+      doc.setTextColor(113, 113, 122);
+      doc.setFontSize(7);
+      doc.text("Amounts use the transactions included by the current History filters.", 14, pageHeight - 14);
+    };
 
     const addHeader = (showSummary = false) => {
       doc.setTextColor(24, 24, 27);
@@ -159,6 +253,21 @@ export default function History() {
       y += 5;
     };
 
+    doc.setTextColor(24, 24, 27);
+    doc.setFontSize(18);
+    doc.text("KharchaFlow Transaction Report", 14, y);
+    doc.setFontSize(9);
+    doc.setTextColor(82, 82, 91);
+    doc.text(`Generated ${formatDate(new Date().toISOString().slice(0, 10), dateSystem)}`, pageWidth - 14, y, { align: "right" });
+    y += 7;
+    doc.text(`Period: ${pdfSafeText(selectedPeriod)} | Entries: ${filteredTransactions.length} | Income: ${pdfSafeText(formatCurrency(income))} | Expenses: ${pdfSafeText(formatCurrency(expenses))} | Net: ${pdfSafeText(formatCurrency(income - expenses))}`, 14, y);
+    y += 6;
+    doc.setDrawColor(212, 212, 216);
+    doc.line(14, y, pageWidth - 14, y);
+    drawCharts();
+
+    doc.addPage();
+    y = 16;
     addHeader(true);
     doc.setFontSize(8);
     filteredTransactions.forEach((tx, index) => {
