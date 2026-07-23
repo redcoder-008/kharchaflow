@@ -29,13 +29,10 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isDemoMode, setIsDemoMode] = useState(() => {
-  if (!hasValidConfig) return true;
-    const savedDemoMode = localStorage.getItem("kharchaflow_demo_mode");
-    if (savedDemoMode === null) {
-      // Default to Live cloud sync mode when a valid Firebase configuration is predefined
-      return false;
-    }
-    return savedDemoMode === "true";
+    // Demo mode is opt-in only. A missing Firebase configuration must never
+    // silently turn an attempted account login into a Demo User session.
+    return localStorage.getItem("kharchaflow_demo_mode") === "true"
+      && localStorage.getItem("kharchaflow_demo_authenticated") === "true";
   });
 
   const persistDemoUser = useCallback((demoUser) => {
@@ -137,36 +134,15 @@ export function AuthProvider({ children }) {
     setError(null);
     setLoading(true);
     try {
-      // Force exit demo/offline mode if we have a valid live Firebase config
-      if (hasValidConfig && isDemoMode) {
+      if (!hasValidConfig || !auth) throw new Error("Firebase is not configured. Configure Firebase in Settings or explicitly choose Continue as Demo.");
+      // An explicit demo session must never intercept a real account login.
+      if (isDemoMode) {
         localDB.setIsDemoMode(false);
         setIsDemoMode(false);
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        setLoading(false);
-        return userCredential.user;
       }
-
-      if (isDemoMode) {
-        // Simple demo authentication checks
-        const savedProfile = localDB.getProfile();
-        const demoUser = {
-          uid: "demo-user-123",
-          email: email.toLowerCase(),
-          displayName: email.toLowerCase() === savedProfile.email.toLowerCase() ? savedProfile.displayName : "Demo User",
-          photoURL: null,
-          isAdmin: false,
-          dateSystem: savedProfile.dateSystem || "gregorian",
-          currency: savedProfile.currency || "INR"
-        };
-        
-        persistDemoUser(demoUser);
-        setLoading(false);
-        return true;
-      } else {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        setLoading(false);
-        return userCredential.user;
-      }
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      setLoading(false);
+      return userCredential.user;
     } catch (err) {
       setError(err.message || "Invalid credentials. Please try again.");
       setLoading(false);
@@ -174,77 +150,25 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const register = async (email, password, displayName) => {
+  const register = async (email, password, displayName, phone = "") => {
     setError(null);
     setLoading(true);
     try {
-      // Force exit demo/offline mode if we have a valid live Firebase config
-      if (hasValidConfig && isDemoMode) {
+      if (!hasValidConfig || !auth || !db) throw new Error("Firebase is not configured. Configure Firebase in Settings or explicitly choose Continue as Demo.");
+      if (isDemoMode) {
         localDB.setIsDemoMode(false);
         setIsDemoMode(false);
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await firebaseUpdateProfile(userCredential.user, { displayName });
-        
-        const userDocRef = doc(db, "users", userCredential.user.uid);
-        await setDoc(userDocRef, {
-          email: email.toLowerCase(),
-          displayName,
-          budgets: localDB.getDefaultBudgets(),
-          initialBalances: localDB.getDefaultInitialBalances(),
-          createdAt: serverTimestamp(),
-          lastActiveAt: serverTimestamp(),
-          isAdmin: false
-        });
-
-        setUser({
-          uid: userCredential.user.uid,
-          email: userCredential.user.email,
-          displayName: displayName,
-          photoURL: null
-        });
-        setLoading(false);
-        return userCredential.user;
       }
-
-      if (isDemoMode) {
-        const newProfile = { displayName, email, photoURL: null };
-        localDB.saveProfile(newProfile);
-        
-        const demoUser = {
-          uid: "demo-user-" + Math.random().toString(36).substring(2, 9),
-          email: email.toLowerCase(),
-          displayName: displayName,
-          photoURL: null,
-          isAdmin: false
-        };
-        
-        persistDemoUser(demoUser);
-        setLoading(false);
-        return true;
-      } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await firebaseUpdateProfile(userCredential.user, { displayName });
-        
-        const userDocRef = doc(db, "users", userCredential.user.uid);
-        await setDoc(userDocRef, {
-          email: email.toLowerCase(),
-          displayName,
-          budgets: localDB.getDefaultBudgets(),
-          initialBalances: localDB.getDefaultInitialBalances(),
-          createdAt: serverTimestamp(),
-          lastActiveAt: serverTimestamp(),
-          isAdmin: false
-        });
-
-        setUser({
-          uid: userCredential.user.uid,
-          email: userCredential.user.email,
-          displayName: displayName,
-          photoURL: null
-        });
-        setLoading(false);
-        return userCredential.user;
-      }
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await firebaseUpdateProfile(userCredential.user, { displayName });
+      await setDoc(doc(db, "users", userCredential.user.uid), {
+        email: email.toLowerCase(), displayName, phone: phone.trim(),
+        budgets: localDB.getDefaultBudgets(), initialBalances: localDB.getDefaultInitialBalances(),
+        createdAt: serverTimestamp(), lastActiveAt: serverTimestamp(), isAdmin: false
+      });
+      setUser({ uid: userCredential.user.uid, email: userCredential.user.email, displayName, photoURL: null, phone: phone.trim() });
+      setLoading(false);
+      return userCredential.user;
     } catch (err) {
       setError(err.message || "Failed to register account.");
       setLoading(false);
