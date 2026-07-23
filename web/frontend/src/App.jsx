@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { FinanceProvider, useFinance } from "./context/FinanceContext";
 import { CalendarProvider } from "./context/CalendarContext";
 import { FeedbackProvider } from "./context/FeedbackContext";
+import { NotificationProvider } from "./context/NotificationContext";
 import Sidebar from "./components/layouts/Sidebar";
 import BottomNav from "./components/layouts/BottomNav";
 import Header from "./components/layouts/Header";
@@ -210,9 +211,11 @@ export default function App() {
     <FeedbackProvider>
       <AuthProvider>
         <CalendarProvider>
-          <FinanceProvider>
-            <AppContent />
-          </FinanceProvider>
+          <NotificationProvider>
+            <FinanceProvider>
+              <AppContent />
+            </FinanceProvider>
+          </NotificationProvider>
         </CalendarProvider>
       </AuthProvider>
     </FeedbackProvider>

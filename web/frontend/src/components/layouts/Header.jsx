@@ -1,16 +1,23 @@
+import { useState } from "react";
 import { 
   CloudLightning, 
   TrendingUp, 
   RefreshCw, 
-  WifiOff 
+  WifiOff,
+  Bell,
+  CheckCheck,
+  BellRing
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useFinance } from "../../context/FinanceContext";
 import UserAvatar from "../ui/UserAvatar";
+import { useNotifications } from "../../context/NotificationContext";
 
 export default function Header({ activePage, setActivePage }) {
   const { user, isDemoMode } = useAuth();
   const { syncStatus } = useFinance();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, enablePush, pushStatus } = useNotifications();
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   const getPageTitle = () => {
     switch (activePage) {
@@ -92,6 +99,27 @@ export default function Header({ activePage, setActivePage }) {
                 )}
               </div>
             )}
+
+            <div className="relative">
+              <button onClick={() => setIsNotificationOpen((open) => !open)} className="relative p-2.5 rounded-xl border border-zinc-800 bg-zinc-900 hover:border-zinc-700 text-zinc-300 hover:text-emerald-400 transition-colors" aria-label="Open notifications">
+                <Bell className="w-4 h-4" />
+                {unreadCount > 0 && <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-[9px] leading-4 text-white font-bold">{unreadCount > 99 ? "99+" : unreadCount}</span>}
+              </button>
+              {isNotificationOpen && (
+                <div className="absolute right-0 mt-2 w-[min(22rem,calc(100vw-2rem))] max-h-[28rem] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl z-50">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+                    <div><p className="text-sm font-bold text-white">Notifications</p><p className="text-[10px] text-zinc-500">{unreadCount ? `${unreadCount} unread` : "You're all caught up"}</p></div>
+                    {unreadCount > 0 && <button onClick={markAllAsRead} className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 flex gap-1 items-center"><CheckCheck className="w-3.5 h-3.5" /> Read all</button>}
+                  </div>
+                  {notifications.length === 0 ? <p className="px-4 py-8 text-center text-xs text-zinc-500">No notifications yet.</p> : notifications.slice(0, 30).map((notification) => (
+                    <button key={notification.id} onClick={() => markAsRead(notification.id)} className={`w-full text-left px-4 py-3 border-b border-zinc-900 hover:bg-zinc-900/70 transition-colors ${notification.read ? "" : "bg-emerald-500/5"}`}>
+                      <div className="flex gap-2"><span className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${notification.read ? "bg-transparent" : "bg-emerald-400"}`} /><div><p className="text-xs font-bold text-zinc-200">{notification.title}</p><p className="mt-0.5 text-[11px] text-zinc-500 leading-relaxed">{notification.body}</p><p className="mt-1 text-[9px] text-zinc-600">{notification.createdAt ? new Date(notification.createdAt).toLocaleString() : "Just now"}</p></div></div>
+                    </button>
+                  ))}
+                  {!isDemoMode && <div className="p-3"><button onClick={async () => { try { await enablePush(); } catch (error) { console.error(error); } }} className="w-full px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-[10px] font-bold text-zinc-300 flex items-center justify-center gap-2"><BellRing className="w-3.5 h-3.5 text-emerald-400" /> {pushStatus === "granted" ? "Push notifications enabled" : "Enable push notifications"}</button></div>}
+                </div>
+              )}
+            </div>
 
             {/* User Profile Avatar */}
             <button

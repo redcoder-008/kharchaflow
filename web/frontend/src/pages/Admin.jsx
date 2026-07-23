@@ -3,14 +3,14 @@ import {
   Users, TrendingUp, TrendingDown, Activity, DollarSign,
   CreditCard, ArrowUpRight, ArrowDownRight, RefreshCw,
   ShieldCheck, UserCheck, UserX, Search, Trash2, Ban,
-  BarChart2, PieChart, Clock, Star, Loader2, Database, Mail, Key
+  BarChart2, PieChart, Clock, Star, Loader2, Database, Mail, Key, Bell, Send, CheckSquare
 
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../../../backend/db/firebase";
 import {
   collection, collectionGroup, getDocs, doc, getDoc,
-  query, orderBy, limit, where, Timestamp,onSnapshot 
+  query, orderBy, limit, where, Timestamp,onSnapshot, addDoc
 } from "firebase/firestore";
 import {
   AreaChart, Area, BarChart, Bar, PieChart as RechartPie, Pie, Cell,
@@ -19,6 +19,7 @@ import {
 import { useCalendar } from "../context/CalendarContext";
 import { useFeedback } from "../context/FeedbackContext";
 import { formatDate, formatMonth, formatCurrency } from "../utils/helpers";
+import { createInAppNotification } from "../context/NotificationContext";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const fmt = (n) => formatCurrency(n, "INR");
@@ -101,6 +102,13 @@ export default function Admin() {
   const [refreshing, setRefreshing] = useState(false);
   const [userSearch, setUserSearch] = useState("");
   const [userPage, setUserPage] = useState(1);
+  const [notificationTitle, setNotificationTitle] = useState("");
+  const [notificationBody, setNotificationBody] = useState("");
+  const [notificationAudience, setNotificationAudience] = useState("all");
+  const [notificationChannel, setNotificationChannel] = useState("both");
+  const [selectedRecipients, setSelectedRecipients] = useState([]);
+  const [notificationHistory, setNotificationHistory] = useState([]);
+  const [sendingNotification, setSendingNotification] = useState(false);
   const USERS_PER_PAGE = 8;
 
   // ── Real-time Data Listeners ────────────────────────────────────────────
@@ -286,6 +294,43 @@ export default function Admin() {
     setUsers(prev => prev.filter(u => u.uid !== uid));
     notify("The user was removed from this view. Configure a server-side admin action to delete their authentication account.", "info");
   };
+  useEffect(() => {
+    if (!db) return undefined;
+    return onSnapshot(query(collection(db, "adminNotifications"), orderBy("createdAt", "desc")), (snapshot) => {
+      setNotificationHistory(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })));
+    });
+  }, []);
+
+  const toggleRecipient = (uid) => setSelectedRecipients((current) => current.includes(uid) ? current.filter((id) => id !== uid) : [...current, uid]);
+  const sendNotification = async (event) => {
+    event.preventDefault();
+    const title = notificationTitle.trim();
+    const body = notificationBody.trim();
+    const recipientIds = notificationAudience === "all" ? users.filter((item) => !item.suspended).map((item) => item.uid) : selectedRecipients;
+    if (!title || !body) return notify("Add a title and message before sending.", "danger");
+    if (!recipientIds.length) return notify("Select at least one recipient.", "danger");
+    setSendingNotification(true);
+    try {
+      const createdAt = new Date().toISOString();
+      const payload = { title, body, channel: notificationChannel, sentBy: user?.uid, createdAt };
+      if (notificationChannel === "in-app" || notificationChannel === "both") {
+        await Promise.all(recipientIds.map((uid) => createInAppNotification(uid, payload)));
+      }
+      if (notificationChannel === "push" || notificationChannel === "both") {
+        await addDoc(collection(db, "pushNotificationRequests"), { ...payload, recipientIds, status: "queued" });
+      }
+      await addDoc(collection(db, "adminNotifications"), { ...payload, recipientIds, recipientCount: recipientIds.length, audience: notificationAudience });
+      setNotificationTitle("");
+      setNotificationBody("");
+      setSelectedRecipients([]);
+      notify(`Notification sent to ${recipientIds.length} user${recipientIds.length === 1 ? "" : "s"}.`, "success");
+    } catch (error) {
+      console.error("Send notification error:", error);
+      notify("Notification could not be sent. Check Firebase permissions and try again.", "danger");
+    } finally {
+      setSendingNotification(false);
+    }
+  };
 
   // ── Filtered / paginated users ────────────────────────────────────────────
   const filteredUsers = users.filter(u =>
@@ -300,6 +345,7 @@ export default function Admin() {
     { id: "overview", label: "Overview", icon: BarChart2 },
     { id: "users", label: "Users", icon: Users },
     { id: "transactions", label: "Transactions", icon: CreditCard },
+    { id: "notifications", label: "Push Notifications", icon: Bell },
     { id: "settings", label: "Settings", icon: Database },
   ];
 
@@ -677,6 +723,23 @@ export default function Admin() {
       {/* ════════════════════════════════════════════════════
           TAB: SETTINGS
       ════════════════════════════════════════════════════ */}
+      {activeTab === "notifications" && (
+        <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6">
+          <form onSubmit={sendNotification} className="bg-zinc-900/70 border border-zinc-800/60 rounded-2xl p-5 space-y-5">
+            <div><h3 className="text-sm font-bold text-white">Compose notification</h3><p className="text-xs text-zinc-500 mt-1">In-app messages appear immediately. Push messages are queued for Firebase Cloud Messaging.</p></div>
+            <div><label className="text-xs font-semibold text-zinc-400" htmlFor="notification-title">Title</label><input id="notification-title" value={notificationTitle} onChange={(event) => setNotificationTitle(event.target.value)} maxLength="90" className="finance-input mt-1.5 py-2.5 text-sm" placeholder="e.g. New feature available" /></div>
+            <div><label className="text-xs font-semibold text-zinc-400" htmlFor="notification-message">Message</label><textarea id="notification-message" value={notificationBody} onChange={(event) => setNotificationBody(event.target.value)} maxLength="400" rows="4" className="finance-input mt-1.5 py-2.5 text-sm resize-none" placeholder="Write the notification users will receive." /></div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div><p className="text-xs font-semibold text-zinc-400 mb-2">Audience</p><div className="flex gap-2"><button type="button" onClick={() => setNotificationAudience("all")} className={`flex-1 py-2 rounded-lg text-xs font-bold border ${notificationAudience === "all" ? "bg-indigo-500/15 border-indigo-500/40 text-indigo-300" : "border-zinc-800 text-zinc-500"}`}>All users</button><button type="button" onClick={() => setNotificationAudience("selected")} className={`flex-1 py-2 rounded-lg text-xs font-bold border ${notificationAudience === "selected" ? "bg-indigo-500/15 border-indigo-500/40 text-indigo-300" : "border-zinc-800 text-zinc-500"}`}>Selected</button></div></div>
+              <div><p className="text-xs font-semibold text-zinc-400 mb-2">Delivery</p><select value={notificationChannel} onChange={(event) => setNotificationChannel(event.target.value)} className="finance-input py-2 text-xs"><option value="in-app">In-app</option><option value="push">Push</option><option value="both">Both</option></select></div>
+            </div>
+            {notificationAudience === "selected" && <div className="max-h-44 overflow-y-auto rounded-xl border border-zinc-800 divide-y divide-zinc-800">{users.filter((item) => !item.suspended).map((item) => <label key={item.uid} className="flex items-center gap-3 px-3 py-2.5 text-xs text-zinc-300 cursor-pointer hover:bg-zinc-800/40"><input type="checkbox" checked={selectedRecipients.includes(item.uid)} onChange={() => toggleRecipient(item.uid)} className="accent-indigo-500" /><span className="min-w-0 truncate">{item.displayName || item.email || item.uid}</span></label>)}</div>}
+            <button disabled={sendingNotification} type="submit" className="w-full py-3 rounded-xl bg-indigo-500 hover:bg-indigo-400 disabled:opacity-60 text-white text-xs font-bold flex items-center justify-center gap-2"><Send className="w-4 h-4" /> {sendingNotification ? "Sending..." : "Send notification"}</button>
+          </form>
+          <section className="bg-zinc-900/70 border border-zinc-800/60 rounded-2xl p-5"><div className="flex items-center gap-2 mb-4"><CheckSquare className="w-4 h-4 text-indigo-400" /><h3 className="text-sm font-bold text-white">Notification history</h3></div>{notificationHistory.length === 0 ? <p className="py-10 text-center text-xs text-zinc-500">No notifications have been sent.</p> : <div className="space-y-3 max-h-[34rem] overflow-y-auto pr-1">{notificationHistory.map((item) => <div key={item.id} className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-3"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold text-zinc-200">{item.title}</p><p className="mt-1 text-xs text-zinc-500">{item.body}</p></div><span className="text-[9px] uppercase font-bold text-indigo-400">{item.channel}</span></div><p className="mt-2 text-[10px] text-zinc-600">{item.recipientCount || item.recipientIds?.length || 0} recipients · {item.createdAt ? new Date(item.createdAt).toLocaleString() : ""}</p></div>)}</div>}</section>
+        </div>
+      )}
+
       {activeTab === "settings" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
