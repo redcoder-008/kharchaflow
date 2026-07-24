@@ -134,7 +134,10 @@ export function AuthProvider({ children }) {
     setError(null);
     setLoading(true);
     try {
-      if (!hasValidConfig || !auth) throw new Error("Firebase is not configured. Configure Firebase in Settings or explicitly choose Continue as Demo.");
+      if (!hasValidConfig || !auth) {
+        console.error("Login Error: Firebase is not configured.", { hasValidConfig, auth: !!auth });
+        throw new Error("Firebase is not configured. Configure Firebase in Settings or explicitly choose Continue as Demo.");
+      }
       // An explicit demo session must never intercept a real account login.
       if (isDemoMode) {
         localDB.setIsDemoMode(false);
@@ -157,7 +160,10 @@ export function AuthProvider({ children }) {
     setError(null);
     setLoading(true);
     try {
-      if (!hasValidConfig || !auth || !db) throw new Error("Firebase is not configured. Configure Firebase in Settings or explicitly choose Continue as Demo.");
+      if (!hasValidConfig || !auth || !db) {
+        console.error("Register Error: Firebase is not configured.", { hasValidConfig, auth: !!auth, db: !!db });
+        throw new Error("Firebase is not configured. Configure Firebase in Settings or explicitly choose Continue as Demo.");
+      }
       if (isDemoMode) {
         localDB.setIsDemoMode(false);
         setIsDemoMode(false);
