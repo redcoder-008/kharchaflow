@@ -179,7 +179,7 @@ function AppContent() {
           <button 
             onClick={() => {
               const a = document.createElement("a");
-              a.href = "/app-debug.apk";
+              a.href = "/kharchaflow.apk";
               a.download = "KharchaFlow.apk";
               a.click();
             }}
