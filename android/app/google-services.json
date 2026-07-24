@@ -21,7 +21,7 @@
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyCYzy2ztL8kuK1iEZgxfiNmFYXlMg3ovRs"
+          "current_key": "import.meta.env.VITE_FIREBASE_API_KEY"
         }
       ],
       "services": {
