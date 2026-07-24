@@ -117,7 +117,7 @@ export default function Header({ activePage, setActivePage }) {
                 {unreadCount > 0 && <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-[9px] leading-4 text-white font-bold">{unreadCount > 99 ? "99+" : unreadCount}</span>}
               </button>
               {isNotificationOpen && (
-                <div className="absolute right-0 mt-2 w-[min(22rem,calc(100vw-2rem))] max-h-[28rem] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl z-50">
+                <div className="absolute -right-14 sm:right-0 mt-2 w-[calc(100vw-2rem)] sm:w-[22rem] max-h-[calc(100vh-8rem)] sm:max-h-[28rem] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl z-50">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
                     <div><p className="text-sm font-bold text-white">Notifications</p><p className="text-[10px] text-zinc-500">{unreadCount ? `${unreadCount} unread` : "You're all caught up"}</p></div>
                     {unreadCount > 0 && <button onClick={markAllAsRead} className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 flex gap-1 items-center"><CheckCheck className="w-3.5 h-3.5" /> Read all</button>}
