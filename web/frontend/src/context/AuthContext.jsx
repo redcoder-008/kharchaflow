@@ -12,9 +12,10 @@ import {
   signInWithPhoneNumber,
   RecaptchaVerifier
 } from "firebase/auth";
-import { doc, setDoc, getDoc, deleteDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db, googleProvider, hasValidConfig } from "../../../backend/db/firebase";
 import { localDB } from "../../../backend/db/storage";
+import { useFeedback } from "./FeedbackContext";
 
 const AuthContext = createContext();
 
@@ -23,17 +24,15 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }) {
+  const { notify } = useFeedback();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isDemoMode, setIsDemoMode] = useState(() => {
-  if (!hasValidConfig) return true;
-    const savedDemoMode = localStorage.getItem("kharchaflow_demo_mode");
-    if (savedDemoMode === null) {
-      // Default to Live cloud sync mode when a valid Firebase configuration is predefined
-      return false;
-    }
-    return savedDemoMode === "true";
+    // Demo mode is opt-in only. A missing Firebase configuration must never
+    // silently turn an attempted account login into a Demo User session.
+    return localStorage.getItem("kharchaflow_demo_mode") === "true"
+      && localStorage.getItem("kharchaflow_demo_authenticated") === "true";
   });
 
   const persistDemoUser = useCallback((demoUser) => {
@@ -69,6 +68,7 @@ export function AuthProvider({ children }) {
         let phone = "";
         let language = "en";
         let dateSystem = "gregorian";
+        let currency = "INR";
         let photoURL = firebaseUser.photoURL;
         try {
           const userDocRef = doc(db, "users", firebaseUser.uid);
@@ -84,6 +84,10 @@ export function AuthProvider({ children }) {
             phone = data.phone || "";
             language = data.language || "en";
             dateSystem = data.dateSystem === "nepali" ? "nepali" : "gregorian";
+            currency = data.currency || "INR";
+            if (typeof window !== "undefined") {
+              window.localStorage.setItem("kharchaflow_currency", currency);
+            }
             // Firestore is the source of truth for the optimized fallback image.
             // Firebase Auth only accepts hosted photo URLs.
             photoURL = data.photoURL || firebaseUser.photoURL;
@@ -105,8 +109,14 @@ export function AuthProvider({ children }) {
           isAdmin,
           phone,
           language,
-          dateSystem
+          dateSystem,
+          currency
         });
+
+        // Keep a server-side activity marker for accurate live admin metrics.
+        // This is intentionally non-blocking so a failed analytics write never blocks login.
+        setDoc(doc(db, "users", firebaseUser.uid), { lastActiveAt: serverTimestamp() }, { merge: true })
+          .catch((err) => console.error("Failed to record user activity: ", err));
       } else {
         setUser(null);
       }
@@ -124,109 +134,50 @@ export function AuthProvider({ children }) {
     setError(null);
     setLoading(true);
     try {
-      // Force exit demo/offline mode if we have a valid live Firebase config
-      if (hasValidConfig && isDemoMode) {
+      if (!hasValidConfig || !auth) {
+        console.error("Login Error: Firebase is not configured.", { hasValidConfig, auth: !!auth });
+        throw new Error("Firebase is not configured. Configure Firebase in Settings or explicitly choose Continue as Demo.");
+      }
+      // An explicit demo session must never intercept a real account login.
+      if (isDemoMode) {
         localDB.setIsDemoMode(false);
         setIsDemoMode(false);
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        setLoading(false);
-        return userCredential.user;
       }
-
-      if (isDemoMode) {
-        // Simple demo authentication checks
-        const savedProfile = localDB.getProfile();
-        const demoUser = {
-          uid: "demo-user-123",
-          email: email.toLowerCase(),
-          displayName: email.toLowerCase() === savedProfile.email.toLowerCase() ? savedProfile.displayName : "Demo User",
-          photoURL: null,
-          isAdmin: false,
-          dateSystem: savedProfile.dateSystem || "gregorian"
-        };
-        
-        persistDemoUser(demoUser);
-        setLoading(false);
-        return true;
-      } else {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        setLoading(false);
-        return userCredential.user;
-      }
-    } catch (err) {
-      setError(err.message || "Invalid credentials. Please try again.");
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       setLoading(false);
-      throw err;
+      return userCredential.user;
+    } catch (err) {
+      const loginError = err.code === "auth/invalid-credential" || err.code === "auth/user-not-found" || err.code === "auth/wrong-password"
+        ? "Incorrect email or password."
+        : (err.message || "Unable to sign in. Please try again.");
+      setError(loginError);
+      setLoading(false);
+      throw new Error(loginError);
     }
   };
 
-  const register = async (email, password, displayName) => {
+  const register = async (email, password, displayName, phone = "") => {
     setError(null);
     setLoading(true);
     try {
-      // Force exit demo/offline mode if we have a valid live Firebase config
-      if (hasValidConfig && isDemoMode) {
+      if (!hasValidConfig || !auth || !db) {
+        console.error("Register Error: Firebase is not configured.", { hasValidConfig, auth: !!auth, db: !!db });
+        throw new Error("Firebase is not configured. Configure Firebase in Settings or explicitly choose Continue as Demo.");
+      }
+      if (isDemoMode) {
         localDB.setIsDemoMode(false);
         setIsDemoMode(false);
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await firebaseUpdateProfile(userCredential.user, { displayName });
-        
-        const userDocRef = doc(db, "users", userCredential.user.uid);
-        await setDoc(userDocRef, {
-          email: email.toLowerCase(),
-          displayName,
-          budgets: localDB.getDefaultBudgets(),
-          initialBalances: localDB.getDefaultInitialBalances(),
-          isAdmin: false
-        });
-
-        setUser({
-          uid: userCredential.user.uid,
-          email: userCredential.user.email,
-          displayName: displayName,
-          photoURL: null
-        });
-        setLoading(false);
-        return userCredential.user;
       }
-
-      if (isDemoMode) {
-        const newProfile = { displayName, email, photoURL: null };
-        localDB.saveProfile(newProfile);
-        
-        const demoUser = {
-          uid: "demo-user-" + Math.random().toString(36).substring(2, 9),
-          email: email.toLowerCase(),
-          displayName: displayName,
-          photoURL: null,
-          isAdmin: false
-        };
-        
-        persistDemoUser(demoUser);
-        setLoading(false);
-        return true;
-      } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await firebaseUpdateProfile(userCredential.user, { displayName });
-        
-        const userDocRef = doc(db, "users", userCredential.user.uid);
-        await setDoc(userDocRef, {
-          email: email.toLowerCase(),
-          displayName,
-          budgets: localDB.getDefaultBudgets(),
-          initialBalances: localDB.getDefaultInitialBalances(),
-          isAdmin: false
-        });
-
-        setUser({
-          uid: userCredential.user.uid,
-          email: userCredential.user.email,
-          displayName: displayName,
-          photoURL: null
-        });
-        setLoading(false);
-        return userCredential.user;
-      }
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await firebaseUpdateProfile(userCredential.user, { displayName });
+      await setDoc(doc(db, "users", userCredential.user.uid), {
+        email: email.toLowerCase(), displayName, phone: phone.trim(),
+        budgets: localDB.getDefaultBudgets(), initialBalances: localDB.getDefaultInitialBalances(),
+        createdAt: serverTimestamp(), lastActiveAt: serverTimestamp(), isAdmin: false
+      });
+      setUser({ uid: userCredential.user.uid, email: userCredential.user.email, displayName, photoURL: null, phone: phone.trim() });
+      setLoading(false);
+      return userCredential.user;
     } catch (err) {
       setError(err.message || "Failed to register account.");
       setLoading(false);
@@ -282,6 +233,8 @@ export function AuthProvider({ children }) {
             displayName: result.user.displayName || "Fintech User",
             budgets: localDB.getDefaultBudgets(),
             initialBalances: localDB.getDefaultInitialBalances(),
+            createdAt: serverTimestamp(),
+            lastActiveAt: serverTimestamp(),
             isAdmin: false
           });
         }
@@ -318,6 +271,8 @@ export function AuthProvider({ children }) {
             displayName: result.user.displayName || "Fintech User",
             budgets: localDB.getDefaultBudgets(),
             initialBalances: localDB.getDefaultInitialBalances(),
+            createdAt: serverTimestamp(),
+            lastActiveAt: serverTimestamp(),
             isAdmin: false
           });
         }
@@ -356,6 +311,9 @@ export function AuthProvider({ children }) {
         const savedProfile = localDB.getProfile();
         const updatedProfile = { ...savedProfile, ...data };
         localDB.saveProfile(updatedProfile);
+        if (data.currency !== undefined && typeof window !== "undefined") {
+          window.localStorage.setItem("kharchaflow_currency", updatedProfile.currency || "INR");
+        }
         
         const updatedUser = { ...user, ...data };
         persistDemoUser(updatedUser);
@@ -379,6 +337,7 @@ export function AuthProvider({ children }) {
           if (data.phone !== undefined) docUpdates.phone = data.phone;
           if (data.language !== undefined) docUpdates.language = data.language;
           if (data.dateSystem !== undefined) docUpdates.dateSystem = data.dateSystem;
+          if (data.currency !== undefined) docUpdates.currency = data.currency;
           if (data.displayName !== undefined) docUpdates.displayName = data.displayName;
           if (data.photoURL !== undefined) docUpdates.photoURL = data.photoURL;
           
@@ -389,6 +348,9 @@ export function AuthProvider({ children }) {
           }
           
           await Promise.all(promises);
+          if (data.currency !== undefined && typeof window !== "undefined") {
+            window.localStorage.setItem("kharchaflow_currency", data.currency);
+          }
           setUser(prev => ({ ...prev, ...data }));
           return true;
         }
@@ -438,7 +400,7 @@ export function AuthProvider({ children }) {
 
   const toggleDemoMode = (val) => {
     if (!hasValidConfig && !val) {
-      alert("No valid Firebase credentials configured. Setup your Firebase keys in settings first.");
+      notify("No valid Firebase credentials are configured. Add your Firebase keys in Settings first.", "danger");
       return;
     }
     localDB.setIsDemoMode(val);
@@ -529,6 +491,8 @@ export function AuthProvider({ children }) {
           phone: firebaseUser.phoneNumber || "",
           budgets: localDB.getDefaultBudgets(),
           initialBalances: localDB.getDefaultInitialBalances(),
+          createdAt: serverTimestamp(),
+          lastActiveAt: serverTimestamp(),
           isAdmin: false
         });
       }

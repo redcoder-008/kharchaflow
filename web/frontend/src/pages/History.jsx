@@ -2,7 +2,8 @@ import { useState, useMemo } from "react";
 import { jsPDF } from "jspdf";
 import { useFinance } from "../context/FinanceContext";
 import { useCalendar } from "../context/CalendarContext";
-import { formatCurrency, formatDate } from "../utils/helpers";
+import { useFeedback } from "../context/FeedbackContext";
+import { formatCurrency, formatDate, getPreferredCurrency } from "../utils/helpers";
 import { CATEGORIES, PAYMENT_METHODS } from "../utils/constants";
 import { 
   Search, 
@@ -12,16 +13,40 @@ import {
   X,
   SlidersHorizontal,
   Download,
-  FileText
+  FileText,
+  RotateCcw
 } from "lucide-react";
 import AddTransactionModal from "../components/transactions/AddTransactionModal";
 
 const escapeCsvValue = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
 const pdfSafeText = (value) => String(value ?? "").replace(/[^\x20-\x7E]/g, "?");
+const PDF_CHART_COLORS = [
+  [5, 150, 105], [14, 116, 144], [124, 58, 237], [217, 119, 6],
+  [190, 24, 93], [22, 163, 74], [2, 132, 199], [147, 51, 234]
+];
+// jsPDF's built-in fonts do not include currency glyphs such as ₹, which can render as ?.
+const formatPdfCurrency = (value) => {
+  const amount = Number(value) || 0;
+  return `${getPreferredCurrency()} ${new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount)}`;
+};
+const formatPdfChartAmount = (value) => {
+  const amount = Number(value) || 0;
+  const absolute = Math.abs(amount);
+  const compact = absolute >= 1000000
+    ? `${(amount / 1000000).toFixed(1)}M`
+    : absolute >= 1000
+      ? `${(amount / 1000).toFixed(1)}K`
+      : amount.toFixed(0);
+  return `${getPreferredCurrency()} ${compact}`;
+};
 
 export default function History() {
-  const { transactions, deleteTransaction } = useFinance();
+  const { transactions, deletedTransactions, deleteTransaction, restoreTransaction, permanentlyDeleteTransaction } = useFinance();
   const { dateSystem } = useCalendar();
+  const { confirm } = useFeedback();
   
   // Filters & Search State
   const [search, setSearch] = useState("");
@@ -39,6 +64,7 @@ export default function History() {
   const [showFiltersMobile, setShowFiltersMobile] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [showRecycleBin, setShowRecycleBin] = useState(false);
 
   // Filter and Search logic
   const filteredTransactions = useMemo(() => {
@@ -102,7 +128,7 @@ export default function History() {
   const downloadCsv = () => {
     const headers = ["Date", "Type", "Category", "Payment Method", "Provider", "Amount", "Notes"];
     const rows = filteredTransactions.map((tx) => [
-      tx.date,
+      formatDate(tx.date, dateSystem),
       tx.type,
       tx.category,
       tx.paymentMethod,
@@ -125,7 +151,107 @@ export default function History() {
     const income = filteredTransactions.filter((tx) => tx.type === "income").reduce((total, tx) => total + (Number(tx.amount) || 0), 0);
     const expenses = filteredTransactions.filter((tx) => tx.type === "expense").reduce((total, tx) => total + (Number(tx.amount) || 0), 0);
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const selectedPeriod = startDate || endDate
+      ? `${startDate ? formatDate(startDate, dateSystem) : "Beginning"} - ${endDate ? formatDate(endDate, dateSystem) : "Present"}`
+      : "All dates";
+    const categoryTotals = Object.values(filteredTransactions.reduce((groups, tx) => {
+      const amount = Number(tx.amount) || 0;
+      const label = `${tx.type === "income" ? "Income" : "Expense"}: ${tx.category || "Uncategorized"}`;
+      groups[label] = groups[label] || { label, amount: 0 };
+      groups[label].amount += amount;
+      return groups;
+    }, {})).sort((a, b) => b.amount - a.amount);
+    const chartData = categoryTotals.length > 8
+      ? [...categoryTotals.slice(0, 7), { label: "Other categories", amount: categoryTotals.slice(7).reduce((total, item) => total + item.amount, 0) }]
+      : categoryTotals;
     let y = 16;
+
+    const drawCharts = () => {
+      const chartTop = 65;
+      const chartHeight = 74;
+      const barLeft = 18;
+      const barWidth = 124;
+      const pieCenterX = 218;
+      const pieCenterY = 100;
+      const pieRadius = 31;
+      const totalAmount = chartData.reduce((total, item) => total + item.amount, 0);
+      const maxAmount = Math.max(...chartData.map((item) => item.amount), 1);
+
+      doc.setTextColor(24, 24, 27);
+      doc.setFontSize(12);
+      doc.text("Transaction amount by category", barLeft, chartTop - 7);
+      doc.text("Category share", pieCenterX, chartTop - 7, { align: "center" });
+      doc.setFontSize(7);
+      doc.setTextColor(113, 113, 122);
+      doc.text(`Selected period: ${pdfSafeText(selectedPeriod)}`, barLeft, chartTop - 2);
+
+      const chartBottom = chartTop + chartHeight;
+      const barChartPadding = 11;
+      const usableBarWidth = barWidth - (barChartPadding * 2);
+      const barGap = 4;
+      const barColumnWidth = Math.min(12, (usableBarWidth - (barGap * Math.max(chartData.length - 1, 0))) / Math.max(chartData.length, 1));
+      const usedBarWidth = (barColumnWidth * chartData.length) + (barGap * Math.max(chartData.length - 1, 0));
+      const firstBarX = barLeft + ((barWidth - usedBarWidth) / 2);
+      const maxBarHeight = chartHeight - 20;
+      doc.setDrawColor(212, 212, 216);
+      doc.setLineWidth(0.35);
+      doc.line(barLeft + 7, chartBottom - 10, barLeft + barWidth - 4, chartBottom - 10);
+      doc.line(barLeft + 7, chartTop + 3, barLeft + 7, chartBottom - 10);
+      chartData.forEach((item, index) => {
+        const color = PDF_CHART_COLORS[index % PDF_CHART_COLORS.length];
+        const height = Math.max((item.amount / maxAmount) * maxBarHeight, item.amount > 0 ? 1.5 : 0);
+        const x = firstBarX + (index * (barColumnWidth + barGap));
+        const y = chartBottom - 10 - height;
+        doc.setFillColor(...color);
+        doc.roundedRect(x, y, barColumnWidth, height, 1, 1, "F");
+        doc.setFontSize(6.5);
+        doc.setTextColor(63, 63, 70);
+        doc.text(formatPdfChartAmount(item.amount), x + (barColumnWidth / 2), Math.max(y - 2, chartTop + 5), { align: "center" });
+        doc.setFontSize(6);
+        doc.text(String(index + 1), x + (barColumnWidth / 2), chartBottom - 4, { align: "center" });
+      });
+
+      let startAngle = -Math.PI / 2;
+      chartData.forEach((item, index) => {
+        const angle = totalAmount ? (item.amount / totalAmount) * Math.PI * 2 : 0;
+        const color = PDF_CHART_COLORS[index % PDF_CHART_COLORS.length];
+        doc.setFillColor(...color);
+        doc.setDrawColor(255, 255, 255);
+        doc.setLineWidth(0.3);
+        doc.lines([
+          [pieRadius * Math.cos(startAngle), pieRadius * Math.sin(startAngle)],
+          [pieRadius * Math.cos(startAngle + angle) - pieRadius * Math.cos(startAngle), pieRadius * Math.sin(startAngle + angle) - pieRadius * Math.sin(startAngle)],
+          [-pieRadius * Math.cos(startAngle + angle), -pieRadius * Math.sin(startAngle + angle)]
+        ], pieCenterX, pieCenterY, [1, 1], "FD", true);
+        startAngle += angle;
+      });
+      doc.setFillColor(255, 255, 255);
+      doc.circle(pieCenterX, pieCenterY, 14, "F");
+      doc.setTextColor(63, 63, 70);
+      doc.setFontSize(7);
+      doc.text("Total", pieCenterX, pieCenterY - 2, { align: "center" });
+      doc.setFontSize(8);
+      doc.text(formatPdfChartAmount(totalAmount), pieCenterX, pieCenterY + 3, { align: "center" });
+
+      const legendTop = 145;
+      chartData.forEach((item, index) => {
+        const column = index % 2;
+        const row = Math.floor(index / 2);
+        const x = 158 + (column * 67);
+        const legendY = legendTop + (row * 8);
+        const color = PDF_CHART_COLORS[index % PDF_CHART_COLORS.length];
+        doc.setFillColor(...color);
+        doc.roundedRect(x, legendY - 3, 4, 4, 0.5, 0.5, "F");
+        doc.setTextColor(63, 63, 70);
+        doc.setFontSize(6.5);
+        const percentage = totalAmount ? Math.round((item.amount / totalAmount) * 100) : 0;
+        doc.text(`${index + 1}. ${pdfSafeText(item.label).slice(0, 15)} (${percentage}%)`, x + 6, legendY);
+      });
+      doc.setTextColor(113, 113, 122);
+      doc.setFontSize(7);
+      doc.text("Amounts use the transactions included by the current History filters.", 14, pageHeight - 14);
+    };
 
     const addHeader = (showSummary = false) => {
       doc.setTextColor(24, 24, 27);
@@ -133,10 +259,10 @@ export default function History() {
       doc.text("KharchaFlow Transaction Report", 14, y);
       doc.setFontSize(9);
       doc.setTextColor(82, 82, 91);
-      doc.text(`Generated ${new Date().toLocaleDateString("en-US")}`, pageWidth - 14, y, { align: "right" });
+      doc.text(`Generated ${formatDate(new Date().toISOString().slice(0, 10), dateSystem)}`, pageWidth - 14, y, { align: "right" });
       y += 7;
       if (showSummary) {
-        doc.text(`Entries: ${filteredTransactions.length} | Income: ${formatCurrency(income)} | Expenses: ${formatCurrency(expenses)} | Net: ${formatCurrency(income - expenses)}`, 14, y);
+        doc.text(`Entries: ${filteredTransactions.length} | Income: ${formatPdfCurrency(income)} | Expenses: ${formatPdfCurrency(expenses)} | Net: ${formatPdfCurrency(income - expenses)}`, 14, y);
         y += 9;
       }
       doc.setDrawColor(212, 212, 216);
@@ -155,6 +281,21 @@ export default function History() {
       y += 5;
     };
 
+    doc.setTextColor(24, 24, 27);
+    doc.setFontSize(18);
+    doc.text("KharchaFlow Transaction Report", 14, y);
+    doc.setFontSize(9);
+    doc.setTextColor(82, 82, 91);
+    doc.text(`Generated ${formatDate(new Date().toISOString().slice(0, 10), dateSystem)}`, pageWidth - 14, y, { align: "right" });
+    y += 7;
+    doc.text(`Period: ${pdfSafeText(selectedPeriod)} | Entries: ${filteredTransactions.length} | Income: ${formatPdfCurrency(income)} | Expenses: ${formatPdfCurrency(expenses)} | Net: ${formatPdfCurrency(income - expenses)}`, 14, y);
+    y += 6;
+    doc.setDrawColor(212, 212, 216);
+    doc.line(14, y, pageWidth - 14, y);
+    drawCharts();
+
+    doc.addPage();
+    y = 16;
     addHeader(true);
     doc.setFontSize(8);
     filteredTransactions.forEach((tx, index) => {
@@ -166,7 +307,7 @@ export default function History() {
       }
       const isIncome = tx.type === "income";
       doc.setTextColor(63, 63, 70);
-      doc.text(pdfSafeText(tx.date), 14, y);
+      doc.text(pdfSafeText(formatDate(tx.date, dateSystem)), 14, y);
       doc.setTextColor(isIncome ? 5 : 190, isIncome ? 150 : 24, isIncome ? 105 : 93);
       doc.text(isIncome ? "Income" : "Expense", 42, y);
       doc.setTextColor(63, 63, 70);
@@ -174,7 +315,7 @@ export default function History() {
       doc.text(pdfSafeText(`${tx.paymentMethod}${tx.provider ? ` - ${tx.provider}` : ""}`).slice(0, 28), 100, y);
       doc.text(pdfSafeText(tx.notes || "No details").slice(0, 52), 148, y);
       doc.setTextColor(isIncome ? 5 : 190, isIncome ? 150 : 24, isIncome ? 105 : 93);
-      doc.text(`${isIncome ? "+" : "-"}${formatCurrency(tx.amount)}`, pageWidth - 14, y, { align: "right" });
+      doc.text(`${isIncome ? "+" : "-"}${formatPdfCurrency(tx.amount)}`, pageWidth - 14, y, { align: "right" });
       y += 7;
       if (index < filteredTransactions.length - 1) {
         doc.setDrawColor(244, 244, 245);
@@ -186,6 +327,59 @@ export default function History() {
 
   return (
     <div className="space-y-6 pb-20 md:pb-8">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-base font-bold text-white">{showRecycleBin ? "Recycle Bin" : "Transaction History"}</h3>
+          <p className="text-xs text-zinc-500 mt-0.5">{showRecycleBin ? "Restore deleted transactions or remove them permanently." : "Review, filter, and manage your transaction ledger."}</p>
+        </div>
+        <button
+          onClick={() => setShowRecycleBin((current) => !current)}
+          className={`px-3 py-2 rounded-xl border text-[10px] font-bold flex items-center gap-1.5 transition-colors ${showRecycleBin ? "bg-emerald-500 text-zinc-950 border-emerald-400" : "bg-zinc-950 border-zinc-800 text-zinc-300 hover:text-emerald-400"}`}
+        >
+          <Trash2 className="w-3.5 h-3.5" /> {showRecycleBin ? "Back to History" : `Recycle Bin${deletedTransactions.length ? ` (${deletedTransactions.length})` : ""}`}
+        </button>
+      </div>
+
+      {showRecycleBin ? (
+        <div className="finance-card overflow-hidden">
+          {deletedTransactions.length === 0 ? (
+            <div className="py-16 flex flex-col items-center text-center gap-2">
+              <Trash2 className="w-9 h-9 text-zinc-700" />
+              <h4 className="text-sm font-semibold text-zinc-400">Recycle Bin is empty</h4>
+              <p className="text-xs text-zinc-600">Deleted transactions will stay here until you restore or permanently delete them.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">{deletedTransactions.length} deleted {deletedTransactions.length === 1 ? "transaction" : "transactions"}</p>
+              {deletedTransactions.map((tx) => {
+                const isIncome = tx.type === "income";
+                return (
+                  <div key={tx.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold">
+                        <span className={isIncome ? "text-emerald-400" : "text-zinc-400"}>{isIncome ? "INCOME" : "EXPENSE"}</span>
+                        <span className="text-zinc-600">{formatDate(tx.date, dateSystem)}</span>
+                        <span className="text-zinc-500">Deleted {tx.deletedAt ? new Date(tx.deletedAt).toLocaleDateString() : "recently"}</span>
+                      </div>
+                      <p className="text-sm font-bold text-zinc-200 truncate mt-1">{tx.notes || "No details"}</p>
+                      <p className="text-xs text-zinc-500 mt-1">{tx.category} · {tx.paymentMethod}{tx.provider ? ` (${tx.provider})` : ""} · <span className={isIncome ? "text-emerald-400" : "text-zinc-300"}>{isIncome ? "+" : "-"}{formatCurrency(tx.amount)}</span></p>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <button onClick={() => restoreTransaction(tx.id)} className="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-[10px] font-bold flex items-center gap-1.5 transition-colors">
+                        <RotateCcw className="w-3.5 h-3.5" /> Restore
+                      </button>
+                      <button onClick={async () => { if (await confirm({ title: "Delete transaction forever?", message: "This transaction cannot be restored after permanent deletion.", confirmLabel: "Delete forever", tone: "danger" })) permanentlyDeleteTransaction(tx.id); }} className="px-3 py-2 rounded-xl bg-zinc-950 border border-rose-500/30 hover:bg-rose-500/10 text-rose-400 text-[10px] font-bold flex items-center gap-1.5 transition-colors">
+                        <Trash2 className="w-3.5 h-3.5" /> Delete forever
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
       
       {/* 1. Filter Control Panel */}
       <div className="finance-card space-y-4">
@@ -519,6 +713,9 @@ export default function History() {
 
       </div>
 
+        </>
+      )}
+
       {/* Edit Drawer Integration */}
       <AddTransactionModal 
         isOpen={isEditOpen} 
@@ -539,9 +736,9 @@ export default function History() {
                 <AlertCircle className="w-5 h-5" />
               </div>
               <div className="flex-1">
-                <h3 className="text-base font-bold text-white mb-2">Confirm Transaction Deletion</h3>
+                <h3 className="text-base font-bold text-white mb-2">Move to Recycle Bin?</h3>
                 <p className="text-xs text-zinc-450 leading-relaxed mb-6">
-                  Are you sure you want to permanently delete this transaction? This action is irreversible and the transaction record will be permanently removed from your history ledger.
+                  This transaction will be removed from your history and stored in the Recycle Bin. You can restore it or permanently delete it later.
                 </p>
                 <div className="flex gap-3 justify-end">
                   <button
@@ -564,7 +761,7 @@ export default function History() {
                     }}
                     className="px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-500 hover:bg-rose-600 text-white transition-colors shadow-md hover:shadow-rose-500/20"
                   >
-                    Delete Record
+                    Move to Bin
                   </button>
                 </div>
               </div>
@@ -582,8 +779,8 @@ export default function History() {
             </svg>
           </div>
           <div>
-            <h5 className="text-xs font-bold text-white">Transaction Record Deleted</h5>
-            <p className="text-[10px] text-zinc-400 font-medium mt-0.5">The selected transaction record has been successfully and permanently deleted.</p>
+            <h5 className="text-xs font-bold text-white">Transaction moved to Recycle Bin</h5>
+            <p className="text-[10px] text-zinc-400 font-medium mt-0.5">You can restore it or permanently remove it from the Recycle Bin.</p>
           </div>
         </div>
       )}

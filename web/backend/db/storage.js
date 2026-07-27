@@ -16,10 +16,24 @@ const DEFAULT_PROFILE = {
   displayName: "Fintech User",
   email: "user@kharchaflow.com",
   photoURL: null,
-  dateSystem: "gregorian"
+  dateSystem: "gregorian",
+  currency: "INR"
 };
 
 const DEFAULT_FINANCIAL_GOALS = [];
+const DEFAULT_BANK_ACCOUNTS = [];
+// These are the expense categories selected for a new user. Users can turn
+// individual defaults on or off from Settings, or add their own categories.
+const DEFAULT_CUSTOM_CATEGORIES = [
+  "Food",
+  "Transport",
+  "Shopping",
+  "Bills",
+  "Entertainment",
+  "Education",
+  "Health",
+  "Others"
+].map((name) => ({ id: `default-${name.toLowerCase()}`, name, isDefault: true }));
 
 // Initial state of balances mapped to payment methods (all default to zero)
 const DEFAULT_INITIAL_BALANCES = {
@@ -89,6 +103,19 @@ export const localDB = {
     localStorage.setItem("kharchaflow_financial_goals", JSON.stringify(goals));
   },
 
+  getBankAccounts: () => {
+    const accounts = localStorage.getItem("kharchaflow_bank_accounts");
+    if (!accounts) {
+      localStorage.setItem("kharchaflow_bank_accounts", JSON.stringify(DEFAULT_BANK_ACCOUNTS));
+      return DEFAULT_BANK_ACCOUNTS;
+    }
+    return JSON.parse(accounts);
+  },
+
+  saveBankAccounts: (accounts) => {
+    localStorage.setItem("kharchaflow_bank_accounts", JSON.stringify(accounts));
+  },
+
   getInitialBalances: () => {
     const balances = localStorage.getItem("kharchaflow_initial_balances");
     if (!balances) {
@@ -100,6 +127,19 @@ export const localDB = {
 
   saveInitialBalances: (balances) => {
     localStorage.setItem("kharchaflow_initial_balances", JSON.stringify(balances));
+  },
+
+  getCustomCategories: () => {
+    const categories = localStorage.getItem("kharchaflow_custom_categories");
+    if (!categories) {
+      localStorage.setItem("kharchaflow_custom_categories", JSON.stringify(DEFAULT_CUSTOM_CATEGORIES));
+      return DEFAULT_CUSTOM_CATEGORIES;
+    }
+    return JSON.parse(categories);
+  },
+
+  saveCustomCategories: (categories) => {
+    localStorage.setItem("kharchaflow_custom_categories", JSON.stringify(categories));
   },
 
   getProfile: () => {
@@ -147,6 +187,8 @@ export const localDB = {
     localStorage.removeItem("kharchaflow_budgets");
     localStorage.removeItem("kharchaflow_financial_goals");
     localStorage.removeItem("kharchaflow_initial_balances");
+    localStorage.removeItem("kharchaflow_bank_accounts");
+    localStorage.removeItem("kharchaflow_custom_categories");
     localStorage.removeItem("kharchaflow_profile");
   },
 

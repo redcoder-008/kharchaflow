@@ -12,6 +12,8 @@ import {
   ChevronLeft,
   ShieldCheck,
   X,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import BrandLogo from "../components/ui/BrandLogo";
 
@@ -73,7 +75,9 @@ export default function Auth() {
   // Email form
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [displayName, setDisplayName] = useState("");
+  const [registrationPhone, setRegistrationPhone] = useState("");
 
   // Phone form
   const [phone, setPhone] = useState("");
@@ -113,6 +117,10 @@ export default function Auth() {
       setValidationError("Please enter your full name.");
       return false;
     }
+    if (!isLoginTab && !isForgotPassword && !/^\+?[0-9\s-]{8,20}$/.test(registrationPhone.trim())) {
+      setValidationError("Enter a valid phone number, including country code (e.g. +977 98XXXXXXXX).");
+      return false;
+    }
     return true;
   };
 
@@ -121,7 +129,7 @@ export default function Auth() {
     const digits = phone.replace(/\D/g, "");
     if (digits.length < 10) {
       setValidationError(
-        "Enter a valid phone number with country code (e.g. +91 98765 43210).",
+        "Enter a valid phone number with country code (e.g. +977 98XXXXXXXX).",
       );
       return false;
     }
@@ -143,7 +151,7 @@ export default function Auth() {
       } else if (isLoginTab) {
         await login(email, password);
       } else {
-        await register(email, password, displayName);
+        await register(email, password, displayName, registrationPhone);
       }
     } catch (err) {
       setValidationError(err.message || "An authentication error occurred.");
@@ -293,16 +301,6 @@ export default function Auth() {
             >
               <Mail className="w-3.5 h-3.5" /> Email
             </button>
-            <button
-              onClick={() => switchMode(MODE.PHONE)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold border transition-all duration-150 ${
-                authMode === MODE.PHONE
-                  ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400"
-                  : "border-zinc-800 text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              <Phone className="w-3.5 h-3.5" /> Phone
-            </button>
           </div>
         )}
 
@@ -374,6 +372,17 @@ export default function Auth() {
               </div>
             )}
 
+            {!isLoginTab && !isForgotPassword && (
+              <div>
+                <label htmlFor="registration-phone" className="finance-label">Phone Number</label>
+                <div className="relative">
+                  <input id="registration-phone" type="tel" placeholder="+977 98XXXXXXXX" value={registrationPhone} onChange={(e) => setRegistrationPhone(e.target.value)} disabled={loading} className="finance-input pl-10" />
+                  <Phone className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-zinc-500" />
+                </div>
+                <p className="text-[10px] text-zinc-600 mt-1.5 ml-0.5">Include country code e.g. +977 for Nepal</p>
+              </div>
+            )}
+
             {/* Email */}
             <div>
               <label htmlFor="email" className="finance-label">
@@ -417,7 +426,7 @@ export default function Auth() {
                 <div className="relative">
                   <input
                     id="password"
-                    type="password"
+                    type={isPasswordVisible ? "text" : "password"}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -425,6 +434,9 @@ export default function Auth() {
                     className="finance-input pl-10"
                   />
                   <Lock className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-zinc-500" />
+                  <button type="button" onClick={() => setIsPasswordVisible((visible) => !visible)} className="absolute right-3 top-3 text-zinc-500 hover:text-zinc-200 transition-colors" aria-label={isPasswordVisible ? "Hide password" : "Show password"}>
+                    {isPasswordVisible ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+                  </button>
                 </div>
               </div>
             )}
@@ -488,7 +500,7 @@ export default function Auth() {
                     <input
                       id="phone"
                       type="tel"
-                      placeholder="+91 98765 43210"
+                      placeholder="+977 98XXXXXXXX"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       disabled={loading}
@@ -497,7 +509,7 @@ export default function Auth() {
                     <Phone className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-zinc-500" />
                   </div>
                   <p className="text-[10px] text-zinc-600 mt-1.5 ml-0.5">
-                    Include country code e.g. +91 for India
+                    Include country code e.g. +977 for Nepal
                   </p>
                 </div>
 
@@ -618,7 +630,7 @@ export default function Auth() {
                 disabled={loading}
                 className="w-full bg-transparent hover:bg-zinc-800/40 text-zinc-400 hover:text-zinc-200 font-semibold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-150 text-xs border border-transparent hover:border-zinc-800"
               >
-                Continue without account
+                Continue as Demo
               </button>
             </>
           )}
@@ -643,7 +655,7 @@ export default function Auth() {
               </div>
 
               <h3 className="text-lg font-bold text-white tracking-tight">
-                Continue without Account?
+                Continue as Demo?
               </h3>
               <p className="text-xs text-zinc-400 mt-2.5 leading-relaxed">
                 Your transactions{" "}
@@ -662,7 +674,7 @@ export default function Auth() {
                   }}
                   className="w-full bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.99] text-xs shadow-lg shadow-emerald-500/10"
                 >
-                  <span>Continue Offline</span>
+                  <span>Continue as Demo</span>
                   <ArrowRight className="w-4 h-4 stroke-[2.2]" />
                 </button>
               </div>

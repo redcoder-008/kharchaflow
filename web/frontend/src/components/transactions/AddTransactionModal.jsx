@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useFinance } from "../../context/FinanceContext";
 import { useCalendar } from "../../context/CalendarContext";
-import { CATEGORIES, PAYMENT_METHODS, EWALLET_PROVIDERS, BANK_PROVIDERS } from "../../utils/constants";
+import { CATEGORIES, PAYMENT_METHODS, EWALLET_PROVIDERS } from "../../utils/constants";
 import { formatCurrency, nepaliDateInputToIso, toNepaliDateInput } from "../../utils/helpers";
 import { 
   X, 
@@ -10,9 +10,14 @@ import {
   TrendingUp,
   TrendingDown
 } from "lucide-react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { NepaliDatePicker } from "nepali-datepicker-reactjs";
+import "nepali-datepicker-reactjs/dist/index.css";
+import { format } from "date-fns";
 
 export default function AddTransactionModal({ isOpen, onClose, editingTransaction, setActivePage, defaultType }) {
-  const { addTransaction, editTransaction, currentBalances } = useFinance();
+  const { addTransaction, editTransaction, currentBalances, bankAccounts, categories } = useFinance();
   const { dateSystem } = useCalendar();
   
   // Form state fields
@@ -58,7 +63,16 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
     if (dateSystem === "nepali") {
       setNepaliDate(toNepaliDateInput(date));
     }
-  }, [dateSystem, date]);
+    
+    // Cleanup any orphaned portal calendars to prevent "two calendars appearing" bug
+    return () => {
+      document.querySelectorAll('.react-datepicker-popper, .calender').forEach(el => {
+        if (el.parentNode === document.body || el.closest('.nepali-date-picker') || el.classList.contains('react-datepicker-popper')) {
+           el.remove();
+        }
+      });
+    };
+  }, [dateSystem, date, isOpen]);
 
   // Adjust provider and category defaults when payment method or type changes
   useEffect(() => {
@@ -68,11 +82,12 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
     if (paymentMethod === "eWallet") {
       setProvider(EWALLET_PROVIDERS[0]);
     } else if (paymentMethod === "Bank Account" || paymentMethod === "Mobile Banking") {
-      setProvider(BANK_PROVIDERS[0]);
+      const firstAccount = bankAccounts[0]?.name || "";
+      setProvider(firstAccount);
     } else {
       setProvider("");
     }
-  }, [paymentMethod, editingTransaction]);
+  }, [paymentMethod, editingTransaction, bankAccounts]);
 
   useEffect(() => {
     if (editingTransaction) return;
@@ -81,9 +96,9 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
     if (type === "income") {
       setCategory("Income");
     } else {
-      setCategory("Food");
+      setCategory(categories?.[0]?.name || "Food");
     }
-  }, [type, editingTransaction]);
+  }, [type, editingTransaction, categories]);
 
   const getAvailableBalance = () => {
     if (!currentBalances) return 0;
@@ -116,6 +131,10 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
 
   const availableBalance = getAvailableBalance();
   const numericAmount = Number(amount || 0);
+  const bankAccountOptions = bankAccounts.length > 0 ? bankAccounts : [];
+  const categoryOptions = type === "income"
+    ? ["Income"]
+    : (categories || []).map((expenseCategory) => expenseCategory.name);
   const resultingBalance = type === "expense" 
     ? availableBalance - numericAmount 
     : availableBalance + numericAmount;
@@ -192,7 +211,7 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
 
       {/* Main Drawer Shell */}
       <div
-        className="w-full md:max-w-xl bg-zinc-900 border border-zinc-800 md:rounded-3xl rounded-t-3xl shadow-2xl relative z-10 flex flex-col animate-slide-up md:animate-none overflow-hidden"
+        className="w-full md:max-w-xl bg-zinc-900 border border-zinc-800 md:rounded-3xl rounded-t-3xl shadow-2xl relative z-10 flex flex-col animate-slide-up md:animate-none overflow-visible"
         style={{
           /* Mobile: cap to 90dvh so it shrinks with keyboard and never covers bottom nav */
           maxHeight: 'min(90dvh, calc(100dvh - env(safe-area-inset-bottom, 0px)))',
@@ -291,49 +310,68 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
           <div>
             <label htmlFor="date" className="finance-label">Transaction Date {dateSystem === "nepali" ? "(Bikram Sambat)" : ""}</label>
             <div className="relative">
-              <input
-                id="date"
-                type={dateSystem === "nepali" ? "text" : "date"}
-                inputMode={dateSystem === "nepali" ? "numeric" : undefined}
-                placeholder={dateSystem === "nepali" ? "2083-04-01" : undefined}
-                value={dateSystem === "nepali" ? nepaliDate : date}
-                onChange={(e) => dateSystem === "nepali" ? setNepaliDate(e.target.value) : setDate(e.target.value)}
-                required
-                className="finance-input pl-10"
-              />
-              <Calendar className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-zinc-500" />
+              {dateSystem === "nepali" ? (
+                <div key="nepali-picker" className="w-full relative z-50">
+                  <NepaliDatePicker
+                    inputClassName="finance-input pl-10 w-full"
+                    className="w-full"
+                    value={nepaliDate}
+                    onChange={(value) => setNepaliDate(value)}
+                    options={{ calenderLocale: "ne", valueLocale: "en" }}
+                  />
+                </div>
+              ) : (
+                <div key="gregorian-picker" className="w-full relative z-50">
+                  <DatePicker
+                    id="date"
+                    selected={date ? new Date(date) : null}
+                    onChange={(d) => setDate(d ? format(d, "yyyy-MM-dd") : "")}
+                    dateFormat="MMM d, yyyy"
+                    required
+                    className="finance-input pl-10 w-full"
+                    wrapperClassName="w-full"
+                    popperPlacement="bottom-start"
+                    popperClassName="transaction-datepicker-popper"
+                    calendarClassName="transaction-datepicker-calendar"
+                    showPopperArrow={false}
+                  />
+                </div>
+              )}
+              <Calendar className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-zinc-500 pointer-events-none z-50" />
             </div>
             {dateSystem === "nepali" && <p className="mt-1.5 text-[10px] text-zinc-500">Enter the Nepali date as YYYY-MM-DD.</p>}
           </div>
 
-          {/* 4. Category Selector (Only for expenses, locked as Income for Income type) */}
-          {type === "expense" && (
-            <div>
-              <label className="finance-label">Category</label>
-              <div className="grid grid-cols-4 gap-2">
-                {Object.values(CATEGORIES).map((cat) => {
-                  if (cat.name === "Income") return null;
-                  const Icon = cat.icon;
-                  const isSelected = category === cat.name;
-                  return (
-                    <button
-                      key={cat.name}
-                      type="button"
-                      onClick={() => setCategory(cat.name)}
-                      className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
-                        isSelected 
-                          ? `${cat.bgClass} scale-[1.03]` 
-                          : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200"
-                      }`}
-                    >
-                      <Icon className="w-5 h-5 mb-1.5" />
-                      <span className="text-[10px] font-semibold tracking-tight">{cat.name}</span>
-                    </button>
-                  );
+          {/* 4. Category Selector */}
+          <div>
+            <label className="finance-label">Category</label>
+            {categoryOptions.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-zinc-800 px-3 py-3 text-xs text-zinc-500">Choose at least one expense category in Settings to record an expense.</p>
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
+                {categoryOptions.map((catName) => {
+                const catMeta = CATEGORIES[catName] || { name: catName, icon: FileText, bgClass: "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200" };
+                const Icon = catMeta.icon;
+                const isSelected = category === catName;
+                return (
+                  <button
+                    key={catName}
+                    type="button"
+                    onClick={() => setCategory(catName)}
+                    className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
+                      isSelected 
+                        ? `${catMeta.bgClass} ring-1 ring-emerald-400/70 text-emerald-300 scale-[1.03]` 
+                        : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200"
+                    }`}
+                  >
+                    <Icon className="w-5 h-5 mb-1.5" />
+                    <span className="text-[10px] font-semibold tracking-tight">{catName}</span>
+                  </button>
+                );
                 })}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* 5. Payment Method Selector */}
           <div>
@@ -389,17 +427,26 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
 
           {(paymentMethod === "Bank Account" || paymentMethod === "Mobile Banking") && (
             <div>
-              <label htmlFor="provider" className="finance-label">Bank Partner</label>
-              <select
-                id="provider"
-                value={provider}
-                onChange={(e) => setProvider(e.target.value)}
-                className="finance-input"
-              >
-                {BANK_PROVIDERS.map((bank) => (
-                  <option key={bank} value={bank}>{bank}</option>
-                ))}
-              </select>
+              <label htmlFor="provider" className="finance-label">Select Account</label>
+              {bankAccountOptions.length > 0 ? (
+                <select
+                  id="provider"
+                  value={provider}
+                  onChange={(e) => setProvider(e.target.value)}
+                  className="finance-input"
+                >
+                  {bankAccountOptions.map((account) => (
+                    <option key={account.id || account.name} value={account.name}>{account.name}</option>
+                  ))}
+                  {!bankAccountOptions.some((account) => account.name === provider) && provider ? (
+                    <option value={provider}>{provider}</option>
+                  ) : null}
+                </select>
+              ) : (
+                <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-950/50 px-3 py-3 text-sm text-zinc-500">
+                  No bank accounts yet. Create one in Settings first.
+                </div>
+              )}
             </div>
           )}
 

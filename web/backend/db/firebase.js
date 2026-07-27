@@ -26,6 +26,10 @@ const firebaseConfig = savedConfig || {
 
 const hasValidConfig = !!(firebaseConfig.apiKey && firebaseConfig.projectId);
 
+if (!hasValidConfig) {
+  console.error("Firebase config is missing or invalid. Check your Vercel Environment Variables. Current config object:", firebaseConfig);
+}
+
 if (hasValidConfig) {
   try {
     if (getApps().length === 0) {

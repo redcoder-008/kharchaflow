@@ -3,25 +3,33 @@ import {
   Users, TrendingUp, TrendingDown, Activity, DollarSign,
   CreditCard, ArrowUpRight, ArrowDownRight, RefreshCw,
   ShieldCheck, UserCheck, UserX, Search, Trash2, Ban,
-  BarChart2, PieChart, Clock, Star, Loader2, Database, Mail, Key
+  BarChart2, PieChart, Clock, Star, Loader2, Database, Mail, Key, Bell, Send, CheckSquare
 
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../../../backend/db/firebase";
 import {
   collection, collectionGroup, getDocs, doc, getDoc,
-  query, orderBy, limit, where, Timestamp,onSnapshot 
+  query, orderBy, limit, where, Timestamp,onSnapshot, addDoc
 } from "firebase/firestore";
 import {
   AreaChart, Area, BarChart, Bar, PieChart as RechartPie, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
+import { useCalendar } from "../context/CalendarContext";
+import { useFeedback } from "../context/FeedbackContext";
+import { formatDate, formatMonth, formatCurrency } from "../utils/helpers";
+import { createInAppNotification } from "../context/NotificationContext";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-const fmt = (n) =>
-  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n ?? 0);
+const fmt = (n) => formatCurrency(n, "INR");
 
 const fmtNum = (n) => new Intl.NumberFormat("en-IN").format(n ?? 0);
+const toDate = (value) => {
+  if (!value) return null;
+  const date = value?.toDate ? value.toDate() : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
 
 function StatCard({ icon: Icon, label, value, sub, color = "indigo", loading }) {
   const colors = {
@@ -84,6 +92,8 @@ const CustomTooltip = ({ active, payload, label }) => {
 // ─── Main Component ─────────────────────────────────────────────────────────
 export default function Admin() {
   const { user } = useAuth();
+  const { dateSystem } = useCalendar();
+  const { confirm, notify } = useFeedback();
   const [activeTab, setActiveTab] = useState("overview");
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
@@ -92,6 +102,13 @@ export default function Admin() {
   const [refreshing, setRefreshing] = useState(false);
   const [userSearch, setUserSearch] = useState("");
   const [userPage, setUserPage] = useState(1);
+  const [notificationTitle, setNotificationTitle] = useState("");
+  const [notificationBody, setNotificationBody] = useState("");
+  const [notificationAudience, setNotificationAudience] = useState("all");
+  const [notificationChannel, setNotificationChannel] = useState("both");
+  const [selectedRecipients, setSelectedRecipients] = useState([]);
+  const [notificationHistory, setNotificationHistory] = useState([]);
+  const [sendingNotification, setSendingNotification] = useState(false);
   const USERS_PER_PAGE = 8;
 
   // ── Real-time Data Listeners ────────────────────────────────────────────
@@ -106,30 +123,47 @@ export default function Admin() {
     let txByUser = {}; // uid -> tx[]
 
     const recompute = () => {
-      const allTx = Object.values(txByUser).flat();
+      const allTx = Object.values(txByUser).flat().filter((tx) => !tx.deletedAt);
       allTx.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
-      const totalIncome = allTx.filter(t => t.type === "income").reduce((s, t) => s + Number(t.amount || 0), 0);
-      const totalExpense = allTx.filter(t => t.type === "expense").reduce((s, t) => s + Number(t.amount || 0), 0);
+      const userLookup = new Map(
+        latestUsers.map((u) => [u.uid, {
+          name: u.displayName || u.email || "Unknown User",
+          email: u.email || ""
+        }])
+      );
 
-      const activeUids = new Set(allTx.map(t => t.uid).filter(Boolean));
+      const enrichedTx = allTx.map((tx) => {
+        const userInfo = userLookup.get(tx.uid) || { name: "Unknown User", email: "" };
+        return {
+          ...tx,
+          userName: userInfo.name,
+          userEmail: userInfo.email,
+          description: tx.notes || tx.description || tx.title || "No note provided"
+        };
+      });
+
+      const totalIncome = enrichedTx.filter(t => t.type === "income").reduce((s, t) => s + Number(t.amount || 0), 0);
+      const totalExpense = enrichedTx.filter(t => t.type === "expense").reduce((s, t) => s + Number(t.amount || 0), 0);
 
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const newUsersMonth = latestUsers.filter(u => {
-        if (!u.createdAt) return false;
-        const d = u.createdAt?.toDate ? u.createdAt.toDate() : new Date(u.createdAt);
-        return d >= startOfMonth;
-      }).length;
-
       const last30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      const recentTxList = allTx.filter(t => {
+      const newUsersMonth = latestUsers.filter(u => {
+        const joinedAt = toDate(u.createdAt);
+        return joinedAt && joinedAt >= startOfMonth;
+      }).length;
+      const activeUsers = latestUsers.filter((u) => {
+        const lastActiveAt = toDate(u.lastActiveAt);
+        return !u.suspended && lastActiveAt && lastActiveAt >= last30;
+      }).length;
+      const recentTxList = enrichedTx.filter(t => {
         const d = t.date ? new Date(t.date) : null;
         return d && d >= last30;
       });
 
       const catMap = {};
-      allTx.filter(t => t.type === "expense").forEach(t => {
+      enrichedTx.filter(t => t.type === "expense").forEach(t => {
         catMap[t.category] = (catMap[t.category] || 0) + Number(t.amount || 0);
       });
       const categoryData = Object.entries(catMap)
@@ -148,39 +182,44 @@ export default function Admin() {
       const monthlyMap = {};
       for (let i = 5; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const key = d.toLocaleString("default", { month: "short", year: "2-digit" });
+        const key = d.toISOString().slice(0, 7);
         monthlyMap[key] = { month: key, income: 0, expense: 0 };
       }
-      allTx.forEach(t => {
+      enrichedTx.forEach(t => {
         const d = t.date ? new Date(t.date) : null;
         if (!d) return;
-        const key = d.toLocaleString("default", { month: "short", year: "2-digit" });
+        const key = d.toISOString().slice(0, 7);
         if (monthlyMap[key]) {
           if (t.type === "income") monthlyMap[key].income += Number(t.amount || 0);
           else monthlyMap[key].expense += Number(t.amount || 0);
         }
       });
-      const monthlyTrend = Object.values(monthlyMap);
-
       const growthMap = {};
       for (let i = 5; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const key = d.toLocaleString("default", { month: "short", year: "2-digit" });
+        const key = d.toISOString().slice(0, 7);
         growthMap[key] = { month: key, users: 0 };
       }
       latestUsers.forEach(u => {
-        if (!u.createdAt) return;
-        const d = u.createdAt?.toDate ? u.createdAt.toDate() : new Date(u.createdAt);
-        const key = d.toLocaleString("default", { month: "short", year: "2-digit" });
+        const d = toDate(u.createdAt);
+        if (!d) return;
+        const key = d.toISOString().slice(0, 7);
         if (growthMap[key]) growthMap[key].users += 1;
       });
-      const userGrowth = Object.values(growthMap);
+      const monthlyTrend = Object.entries(monthlyMap)
+        .map(([key, values]) => ({ ...values, monthLabel: formatMonth(`${key}-01`, dateSystem, true) }))
+        .sort((a, b) => a.month.localeCompare(b.month));
+
+      const userGrowth = Object.values(growthMap).map((item) => ({
+        ...item,
+        monthLabel: formatMonth(`${item.month}-01`, dateSystem, true)
+      }));
 
       setStats({
         totalUsers: latestUsers.length,
-        activeUsers: activeUids.size,
+        activeUsers,
         newUsersMonth,
-        totalTx: allTx.length,
+        totalTx: enrichedTx.length,
         totalIncome,
         totalExpense,
         totalSavings: totalIncome - totalExpense,
@@ -192,7 +231,7 @@ export default function Admin() {
         userGrowth,
       });
       setUsers(latestUsers);
-      setRecentTx(allTx.slice(0, 20));
+      setRecentTx(enrichedTx.slice(0, 20));
       setLoading(false);
       setRefreshing(false);
     };
@@ -222,6 +261,7 @@ export default function Admin() {
           recompute();
         }, (err) => {
           console.error(`Admin: tx listener error for ${u.uid}:`, err);
+          notify("Some transaction data could not be loaded. Check Firestore permissions.", "danger");
         });
         unsubscribers.push(txUnsub);
       });
@@ -229,6 +269,7 @@ export default function Admin() {
       recompute();
     }, (err) => {
       console.error("Admin: users listener error:", err);
+      notify("Unable to load live admin data. Check your Firestore permissions and connection.", "danger");
       setLoading(false);
     });
     unsubscribers.push(usersUnsub);
@@ -236,7 +277,7 @@ export default function Admin() {
     return () => {
       unsubscribers.forEach(fn => fn());
     };
-  }, []);
+  }, [dateSystem, notify]);
 
   // Manual refresh (just a visual indicator since data is already live)
   const handleRefresh = () => {
@@ -248,9 +289,47 @@ export default function Admin() {
   const toggleSuspend = (uid) => {
     setUsers(prev => prev.map(u => u.uid === uid ? { ...u, suspended: !u.suspended } : u));
   };
-  const removeUser = (uid) => {
-    if (!window.confirm("Delete this user? This cannot be undone.")) return;
+  const removeUser = async (uid) => {
+    if (!await confirm({ title: "Delete user?", message: "This action cannot be undone. User data may require a server-side cleanup as well.", confirmLabel: "Delete user", tone: "danger" })) return;
     setUsers(prev => prev.filter(u => u.uid !== uid));
+    notify("The user was removed from this view. Configure a server-side admin action to delete their authentication account.", "info");
+  };
+  useEffect(() => {
+    if (!db) return undefined;
+    return onSnapshot(query(collection(db, "adminNotifications"), orderBy("createdAt", "desc")), (snapshot) => {
+      setNotificationHistory(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })));
+    });
+  }, []);
+
+  const toggleRecipient = (uid) => setSelectedRecipients((current) => current.includes(uid) ? current.filter((id) => id !== uid) : [...current, uid]);
+  const sendNotification = async (event) => {
+    event.preventDefault();
+    const title = notificationTitle.trim();
+    const body = notificationBody.trim();
+    const recipientIds = notificationAudience === "all" ? users.filter((item) => !item.suspended).map((item) => item.uid) : selectedRecipients;
+    if (!title || !body) return notify("Add a title and message before sending.", "danger");
+    if (!recipientIds.length) return notify("Select at least one recipient.", "danger");
+    setSendingNotification(true);
+    try {
+      const createdAt = new Date().toISOString();
+      const payload = { title, body, channel: notificationChannel, sentBy: user?.uid, createdAt };
+      if (notificationChannel === "in-app" || notificationChannel === "both") {
+        await Promise.all(recipientIds.map((uid) => createInAppNotification(uid, payload)));
+      }
+      if (notificationChannel === "push" || notificationChannel === "both") {
+        await addDoc(collection(db, "pushNotificationRequests"), { ...payload, recipientIds, status: "queued" });
+      }
+      await addDoc(collection(db, "adminNotifications"), { ...payload, recipientIds, recipientCount: recipientIds.length, audience: notificationAudience });
+      setNotificationTitle("");
+      setNotificationBody("");
+      setSelectedRecipients([]);
+      notify(`Notification sent to ${recipientIds.length} user${recipientIds.length === 1 ? "" : "s"}.`, "success");
+    } catch (error) {
+      console.error("Send notification error:", error);
+      notify("Notification could not be sent. Check Firebase permissions and try again.", "danger");
+    } finally {
+      setSendingNotification(false);
+    }
   };
 
   // ── Filtered / paginated users ────────────────────────────────────────────
@@ -266,6 +345,7 @@ export default function Admin() {
     { id: "overview", label: "Overview", icon: BarChart2 },
     { id: "users", label: "Users", icon: Users },
     { id: "transactions", label: "Transactions", icon: CreditCard },
+    { id: "notifications", label: "Push Notifications", icon: Bell },
     { id: "settings", label: "Settings", icon: Database },
   ];
 
@@ -318,10 +398,17 @@ export default function Admin() {
           {/* Stat Cards */}
           <div>
             <SectionHeader title="Key Metrics" icon={Activity} />
+            {!loading && stats?.newUsersMonth > 0 && (
+              <div className="mb-4 flex items-center gap-3 rounded-2xl border border-violet-500/25 bg-violet-500/10 px-4 py-3 text-violet-200">
+                <span className="text-xl animate-bounce" aria-hidden="true">🎉</span>
+                <p className="text-xs font-semibold"><span className="text-violet-300 font-bold">+{fmtNum(stats.newUsersMonth)}</span> new {stats.newUsersMonth === 1 ? "user has" : "users have"} joined this month.</p>
+                <span className="ml-auto text-sm animate-pulse" aria-hidden="true">✨</span>
+              </div>
+            )}
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-4">
               <StatCard icon={Users} label="Total Users" value={fmtNum(stats?.totalUsers)} color="indigo" loading={loading} />
-              <StatCard icon={UserCheck} label="Active Users" value={fmtNum(stats?.activeUsers)} sub="ever transacted" color="emerald" loading={loading} />
-              <StatCard icon={Star} label="New This Month" value={fmtNum(stats?.newUsersMonth)} color="violet" loading={loading} />
+              <StatCard icon={UserCheck} label="Active Users" value={fmtNum(stats?.activeUsers)} sub="active in the last 30 days" color="emerald" loading={loading} />
+              <StatCard icon={Star} label="New This Month" value={fmtNum(stats?.newUsersMonth)} sub={stats?.newUsersMonth ? `+${fmtNum(stats.newUsersMonth)} joined` : "No new users yet"} color="violet" loading={loading} />
               <StatCard icon={CreditCard} label="Total Transactions" value={fmtNum(stats?.totalTx)} color="sky" loading={loading} />
               <StatCard icon={Clock} label="Last 30d Tx" value={fmtNum(stats?.recentTxCount)} color="amber" loading={loading} />
             </div>
@@ -425,6 +512,7 @@ export default function Admin() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-zinc-800">
+                      <th className="pb-2 text-left text-xs text-zinc-500 font-semibold uppercase tracking-wider">User</th>
                       <th className="pb-2 text-left text-xs text-zinc-500 font-semibold uppercase tracking-wider">Description</th>
                       <th className="pb-2 text-left text-xs text-zinc-500 font-semibold uppercase tracking-wider">Category</th>
                       <th className="pb-2 text-left text-xs text-zinc-500 font-semibold uppercase tracking-wider">Method</th>
@@ -435,13 +523,21 @@ export default function Admin() {
                   <tbody className="divide-y divide-zinc-800/50">
                     {recentTx.map((tx) => (
                       <tr key={tx.id} className="hover:bg-zinc-800/30 transition-colors">
-                        <td className="py-2.5 text-zinc-200 font-medium">{tx.description || "—"}</td>
+                        <td className="py-2.5 text-zinc-200 font-medium">
+                          <div className="flex flex-col">
+                            <span>{tx.userName || "Unknown User"}</span>
+                            {tx.userEmail ? <span className="text-[10px] text-zinc-500">{tx.userEmail}</span> : null}
+                          </div>
+                        </td>
+                        <td className="py-2.5 text-zinc-200 font-medium max-w-[240px]">
+                          <div className="line-clamp-2">{tx.description || "—"}</div>
+                        </td>
                         <td className="py-2.5 text-zinc-400 text-xs">{tx.category || "—"}</td>
                         <td className="py-2.5 text-zinc-400 text-xs">{tx.paymentMethod || "—"}</td>
                         <td className={`py-2.5 text-right font-bold text-xs ${tx.type === "income" ? "text-emerald-400" : "text-rose-400"}`}>
                           {tx.type === "income" ? "+" : "-"}{fmt(tx.amount)}
                         </td>
-                        <td className="py-2.5 text-right text-zinc-500 text-xs">{tx.date ? new Date(tx.date).toLocaleDateString() : "—"}</td>
+                        <td className="py-2.5 text-right text-zinc-500 text-xs">{tx.date ? formatDate(tx.date, dateSystem) : "—"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -531,7 +627,7 @@ export default function Admin() {
                       </td>
                       <td className="p-4 text-xs text-zinc-500">
                         {u.createdAt
-                          ? (u.createdAt?.toDate ? u.createdAt.toDate() : new Date(u.createdAt)).toLocaleDateString()
+                          ? formatDate((u.createdAt?.toDate ? u.createdAt.toDate() : new Date(u.createdAt)).toISOString().slice(0, 10), dateSystem)
                           : "—"}
                       </td>
                       <td className="p-4 text-right space-x-1">
@@ -587,7 +683,7 @@ export default function Admin() {
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-zinc-800 bg-zinc-900/60">
-                    {["Type", "Description", "Category", "Method", "Amount", "Date"].map(h => (
+                    {["Type", "User", "Description", "Category", "Method", "Amount", "Date"].map(h => (
                       <th key={h} className="p-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">{h}</th>
                     ))}
                   </tr>
@@ -600,13 +696,21 @@ export default function Admin() {
                           {tx.type}
                         </span>
                       </td>
-                      <td className="p-4 text-sm text-zinc-200 font-medium">{tx.description || "—"}</td>
+                      <td className="p-4 text-sm text-zinc-200 font-medium">
+                        <div className="flex flex-col">
+                          <span>{tx.userName || "Unknown User"}</span>
+                          {tx.userEmail ? <span className="text-[10px] text-zinc-500">{tx.userEmail}</span> : null}
+                        </div>
+                      </td>
+                      <td className="p-4 text-sm text-zinc-200 font-medium max-w-[260px]">
+                        <div className="line-clamp-2">{tx.description || "—"}</div>
+                      </td>
                       <td className="p-4 text-xs text-zinc-400">{tx.category || "—"}</td>
                       <td className="p-4 text-xs text-zinc-400">{tx.paymentMethod || "—"}</td>
                       <td className={`p-4 text-sm font-bold ${tx.type === "income" ? "text-emerald-400" : "text-rose-400"}`}>
                         {tx.type === "income" ? "+" : "-"}{fmt(tx.amount)}
                       </td>
-                      <td className="p-4 text-xs text-zinc-500">{tx.date ? new Date(tx.date).toLocaleDateString() : "—"}</td>
+                      <td className="p-4 text-xs text-zinc-500">{tx.date ? formatDate(tx.date, dateSystem) : "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -619,6 +723,23 @@ export default function Admin() {
       {/* ════════════════════════════════════════════════════
           TAB: SETTINGS
       ════════════════════════════════════════════════════ */}
+      {activeTab === "notifications" && (
+        <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6">
+          <form onSubmit={sendNotification} className="bg-zinc-900/70 border border-zinc-800/60 rounded-2xl p-5 space-y-5">
+            <div><h3 className="text-sm font-bold text-white">Compose notification</h3><p className="text-xs text-zinc-500 mt-1">In-app messages appear immediately. Push messages are queued for Firebase Cloud Messaging.</p></div>
+            <div><label className="text-xs font-semibold text-zinc-400" htmlFor="notification-title">Title</label><input id="notification-title" value={notificationTitle} onChange={(event) => setNotificationTitle(event.target.value)} maxLength="90" className="finance-input mt-1.5 py-2.5 text-sm" placeholder="e.g. New feature available" /></div>
+            <div><label className="text-xs font-semibold text-zinc-400" htmlFor="notification-message">Message</label><textarea id="notification-message" value={notificationBody} onChange={(event) => setNotificationBody(event.target.value)} maxLength="400" rows="4" className="finance-input mt-1.5 py-2.5 text-sm resize-none" placeholder="Write the notification users will receive." /></div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div><p className="text-xs font-semibold text-zinc-400 mb-2">Audience</p><div className="flex gap-2"><button type="button" onClick={() => setNotificationAudience("all")} className={`flex-1 py-2 rounded-lg text-xs font-bold border ${notificationAudience === "all" ? "bg-indigo-500/15 border-indigo-500/40 text-indigo-300" : "border-zinc-800 text-zinc-500"}`}>All users</button><button type="button" onClick={() => setNotificationAudience("selected")} className={`flex-1 py-2 rounded-lg text-xs font-bold border ${notificationAudience === "selected" ? "bg-indigo-500/15 border-indigo-500/40 text-indigo-300" : "border-zinc-800 text-zinc-500"}`}>Selected</button></div></div>
+              <div><p className="text-xs font-semibold text-zinc-400 mb-2">Delivery</p><select value={notificationChannel} onChange={(event) => setNotificationChannel(event.target.value)} className="finance-input py-2 text-xs"><option value="in-app">In-app</option><option value="push">Push</option><option value="both">Both</option></select></div>
+            </div>
+            {notificationAudience === "selected" && <div className="max-h-44 overflow-y-auto rounded-xl border border-zinc-800 divide-y divide-zinc-800">{users.filter((item) => !item.suspended).map((item) => <label key={item.uid} className="flex items-center gap-3 px-3 py-2.5 text-xs text-zinc-300 cursor-pointer hover:bg-zinc-800/40"><input type="checkbox" checked={selectedRecipients.includes(item.uid)} onChange={() => toggleRecipient(item.uid)} className="accent-indigo-500" /><span className="min-w-0 truncate">{item.displayName || item.email || item.uid}</span></label>)}</div>}
+            <button disabled={sendingNotification} type="submit" className="w-full py-3 rounded-xl bg-indigo-500 hover:bg-indigo-400 disabled:opacity-60 text-white text-xs font-bold flex items-center justify-center gap-2"><Send className="w-4 h-4" /> {sendingNotification ? "Sending..." : "Send notification"}</button>
+          </form>
+          <section className="bg-zinc-900/70 border border-zinc-800/60 rounded-2xl p-5"><div className="flex items-center gap-2 mb-4"><CheckSquare className="w-4 h-4 text-indigo-400" /><h3 className="text-sm font-bold text-white">Notification history</h3></div>{notificationHistory.length === 0 ? <p className="py-10 text-center text-xs text-zinc-500">No notifications have been sent.</p> : <div className="space-y-3 max-h-[34rem] overflow-y-auto pr-1">{notificationHistory.map((item) => <div key={item.id} className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-3"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold text-zinc-200">{item.title}</p><p className="mt-1 text-xs text-zinc-500">{item.body}</p></div><span className="text-[9px] uppercase font-bold text-indigo-400">{item.channel}</span></div><p className="mt-2 text-[10px] text-zinc-600">{item.recipientCount || item.recipientIds?.length || 0} recipients · {item.createdAt ? new Date(item.createdAt).toLocaleString() : ""}</p></div>)}</div>}</section>
+        </div>
+      )}
+
       {activeTab === "settings" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[

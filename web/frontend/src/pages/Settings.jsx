@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useFinance } from "../context/FinanceContext";
 import { useCalendar } from "../context/CalendarContext";
+import { useFeedback } from "../context/FeedbackContext";
 import { db, reloadFirebaseApp } from "../../../backend/db/firebase";
 import { localDB } from "../../../backend/db/storage";
+import { CATEGORIES } from "../utils/constants";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { 
   User, 
@@ -21,14 +23,22 @@ import {
   CalendarDays,
   MessageSquare,
   Star,
-  Send
+  Send,
+  Landmark,
+  Plus,
+  Pencil,
+  DollarSign,
+  Tag
 } from "lucide-react";
 
 export default function Settings() {
   const { user, isDemoMode, logout, updateUserProfile, updateUserPassword, deleteUserAccount } = useAuth();
-  const { budgets, updateBudgets } = useFinance();
+  const { budgets, updateBudgets, bankAccounts, addBankAccount, updateBankAccount, deleteBankAccount, categories, addCategory, updateCategory, deleteCategory, toggleDefaultCategory } = useFinance();
   const { dateSystem, setDateSystem } = useCalendar();
+  const { confirm, notify } = useFeedback();
   const [dateSystemSaving, setDateSystemSaving] = useState(false);
+  const [currencySaving, setCurrencySaving] = useState(false);
+  const [preferredCurrency, setPreferredCurrency] = useState(() => localStorage.getItem("kharchaflow_currency") || "INR");
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [feedbackSaving, setFeedbackSaving] = useState(false);
@@ -50,6 +60,17 @@ export default function Settings() {
   const [categoryBudgets, setCategoryBudgets] = useState({});
   const [budgetSuccess, setBudgetSuccess] = useState(false);
   const [budgetSaving, setBudgetSaving] = useState(false);
+
+  const [bankAccountName, setBankAccountName] = useState("");
+  const [editingBankAccountId, setEditingBankAccountId] = useState(null);
+  const [bankAccountError, setBankAccountError] = useState("");
+  const [categoryName, setCategoryName] = useState("");
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
+  const [categoryError, setCategoryError] = useState("");
+  const [categorySuccess, setCategorySuccess] = useState("");
+  const [categorySaving, setCategorySaving] = useState(false);
+  const [bankAccountSuccess, setBankAccountSuccess] = useState("");
+  const [bankAccountSaving, setBankAccountSaving] = useState(false);
 
   // Theme state fields
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -73,6 +94,7 @@ export default function Settings() {
       setLanguage(user.language || "en");
       setPhotoURL(user.photoURL || "");
       setPhotoPreview(user.photoURL || "");
+      setPreferredCurrency(user.currency || localStorage.getItem("kharchaflow_currency") || "INR");
     }
   }, [user]);
 
@@ -162,9 +184,23 @@ export default function Settings() {
       await setDateSystem(nextDateSystem);
     } catch (err) {
       console.error("Date system update error:", err);
-      alert("Unable to save the date system preference.");
+      notify("Unable to save the date system preference. Please try again.", "danger");
     } finally {
       setDateSystemSaving(false);
+    }
+  };
+
+  const handleCurrencyChange = async (nextCurrency) => {
+    setCurrencySaving(true);
+    try {
+      await updateUserProfile({ currency: nextCurrency });
+      setPreferredCurrency(nextCurrency);
+      localStorage.setItem("kharchaflow_currency", nextCurrency);
+    } catch (err) {
+      console.error("Currency update error:", err);
+      notify("Unable to save the currency preference. Please try again.", "danger");
+    } finally {
+      setCurrencySaving(false);
     }
   };
 
@@ -281,11 +317,12 @@ export default function Settings() {
   };
 
   const handleDeleteAccount = async () => {
-    if (confirm("Are you absolutely sure you want to delete your account? This action cannot be undone and will permanently erase your data.")) {
+    const confirmed = await confirm({ title: "Delete your account?", message: "This permanently removes your profile and data. This action cannot be undone.", confirmLabel: "Delete account", tone: "danger" });
+    if (confirmed) {
       try {
         await deleteUserAccount();
       } catch (err) {
-        alert("Failed to delete account. You may need to log out and log back in first.");
+        notify("Failed to delete your account. Please log in again and retry.", "danger");
       }
     }
   };
@@ -293,6 +330,125 @@ export default function Settings() {
   // Budgets Save
   const handleBudgetChange = (cat, val) => {
     setCategoryBudgets((prev) => ({ ...prev, [cat]: val }));
+  };
+
+  const resetBankAccountForm = () => {
+    setBankAccountName("");
+    setEditingBankAccountId(null);
+    setBankAccountError("");
+  };
+
+  const handleBankAccountSubmit = async (e) => {
+    e.preventDefault();
+    setBankAccountError("");
+    setBankAccountSuccess("");
+
+    const trimmedName = bankAccountName.trim();
+    if (!trimmedName) {
+      setBankAccountError("Please enter an account name.");
+      return;
+    }
+
+    setBankAccountSaving(true);
+    try {
+      if (editingBankAccountId) {
+        await updateBankAccount(editingBankAccountId, trimmedName);
+        setBankAccountSuccess("Bank account updated.");
+      } else {
+        await addBankAccount(trimmedName);
+        setBankAccountSuccess("Bank account added.");
+      }
+      resetBankAccountForm();
+    } catch (err) {
+      console.error("Bank account save error:", err);
+      setBankAccountError(err.message || "Unable to save bank account.");
+    } finally {
+      setBankAccountSaving(false);
+    }
+  };
+
+  const handleEditBankAccount = (account) => {
+    setEditingBankAccountId(account.id);
+    setBankAccountName(account.name);
+    setBankAccountError("");
+    setBankAccountSuccess("");
+  };
+
+  const handleDeleteBankAccount = async (id) => {
+    if (!await confirm({ title: "Delete bank account?", message: "This removes the account from your available payment sources.", confirmLabel: "Delete account", tone: "danger" })) return;
+    try {
+      await deleteBankAccount(id);
+      if (editingBankAccountId === id) resetBankAccountForm();
+      setBankAccountSuccess("Bank account removed.");
+    } catch (err) {
+      console.error("Delete bank account error:", err);
+      setBankAccountError("Unable to delete bank account.");
+    }
+  };
+
+  const resetCategoryForm = () => {
+    setCategoryName("");
+    setEditingCategoryId(null);
+    setCategoryError("");
+  };
+
+  const handleCategorySubmit = async (e) => {
+    e.preventDefault();
+    setCategoryError("");
+    setCategorySuccess("");
+
+    const trimmedName = categoryName.trim();
+    if (!trimmedName) {
+      setCategoryError("Please enter a category name.");
+      return;
+    }
+
+    setCategorySaving(true);
+    try {
+      if (editingCategoryId) {
+        await updateCategory(editingCategoryId, trimmedName);
+        setCategorySuccess("Category updated.");
+      } else {
+        await addCategory(trimmedName);
+        setCategorySuccess("Category added.");
+      }
+      resetCategoryForm();
+    } catch (err) {
+      console.error("Category save error:", err);
+      setCategoryError(err.message || "Unable to save category.");
+    } finally {
+      setCategorySaving(false);
+    }
+  };
+
+  const handleEditCategory = (category) => {
+    setEditingCategoryId(category.id);
+    setCategoryName(category.name);
+    setCategoryError("");
+    setCategorySuccess("");
+  };
+
+  const handleDeleteCategory = async (id) => {
+    if (!await confirm({ title: "Delete category?", message: "Existing transactions will keep this category, but it will no longer be available for new expenses.", confirmLabel: "Delete category", tone: "danger" })) return;
+    try {
+      await deleteCategory(id);
+      if (editingCategoryId === id) resetCategoryForm();
+      setCategorySuccess("Category removed.");
+    } catch (err) {
+      console.error("Delete category error:", err);
+      setCategoryError("Unable to delete category.");
+    }
+  };
+
+  const handleDefaultCategoryToggle = async (categoryName) => {
+    setCategoryError("");
+    setCategorySuccess("");
+    try {
+      await toggleDefaultCategory(categoryName);
+    } catch (err) {
+      console.error("Default category selection error:", err);
+      setCategoryError("Unable to update the selected categories.");
+    }
   };
 
   const handleBudgetsSave = async (e) => {
@@ -317,7 +473,7 @@ export default function Settings() {
     setConfigSuccess(false);
 
     if (!apiKey.trim() || !projectId.trim()) {
-      alert("API Key and Project ID are minimum fields required for database sync.");
+      notify("Enter both an API key and project ID to enable database sync.", "danger");
       return;
     }
 
@@ -340,8 +496,8 @@ export default function Settings() {
     }, 1000);
   };
 
-  const handleResetToDemo = () => {
-    if (confirm("Disconnecting your database keys will switch you back to offline LocalStorage mode. Continue?")) {
+  const handleResetToDemo = async () => {
+    if (await confirm({ title: "Disconnect cloud sync?", message: "You will switch back to offline browser storage on this device.", confirmLabel: "Disconnect", tone: "danger" })) {
       localDB.saveFirebaseConfig(null);
       localDB.setIsDemoMode(true);
       localStorage.removeItem("kharchaflow_demo_active_user");
@@ -499,6 +655,35 @@ export default function Settings() {
           {/* Theme & Display Options */}
           <div className="finance-card">
             <h4 className="text-xs font-bold text-white tracking-tight uppercase border-b border-zinc-800/60 pb-3.5 mb-5 flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-emerald-400" />
+              Currency Preference
+            </h4>
+
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold text-zinc-300">Preferred Currency</p>
+                <p className="text-[10px] text-zinc-500">All financial summaries and transaction amounts will use this currency.</p>
+              </div>
+              <select
+                aria-label="Currency"
+                value={preferredCurrency}
+                onChange={(e) => handleCurrencyChange(e.target.value)}
+                disabled={currencySaving}
+                className="finance-input h-10 py-0 w-40 shrink-0 text-xs font-semibold"
+              >
+                <option value="INR">Indian Rupee (₹)</option>
+                <option value="NPR">Nepalese Rupee (Rs.)</option>
+                <option value="USD">US Dollar ($)</option>
+                <option value="EUR">Euro (€)</option>
+                <option value="GBP">British Pound (£)</option>
+                <option value="AUD">Australian Dollar (A$)</option>
+                <option value="JPY">Japanese Yen (¥)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="finance-card">
+            <h4 className="text-xs font-bold text-white tracking-tight uppercase border-b border-zinc-800/60 pb-3.5 mb-5 flex items-center gap-2">
               <Sun className="w-4 h-4 text-emerald-400" />
               Theme & Interface
             </h4>
@@ -517,6 +702,194 @@ export default function Settings() {
                 <Moon className={`w-3.5 h-3.5 text-zinc-500 z-10 mr-0.5 ${isDarkMode && "text-zinc-950 font-bold"}`} />
               </button>
             </div>
+          </div>
+
+          {/* Bank account manager */}
+          <div className="finance-card">
+            <h4 className="text-xs font-bold text-white tracking-tight uppercase border-b border-zinc-800/60 pb-3.5 mb-5 flex items-center gap-2">
+              <Landmark className="w-4 h-4 text-emerald-400" />
+              Bank Accounts
+            </h4>
+
+            {bankAccountError && (
+              <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/25 rounded-xl text-rose-400 text-xs font-semibold">
+                {bankAccountError}
+              </div>
+            )}
+
+            {bankAccountSuccess && (
+              <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/25 rounded-xl text-emerald-400 text-xs font-semibold">
+                {bankAccountSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleBankAccountSubmit} className="space-y-3 mb-4">
+              <div>
+                <label htmlFor="bank-account-name" className="finance-label">
+                  {editingBankAccountId ? "Edit account name" : "Add account name"}
+                </label>
+                <input
+                  id="bank-account-name"
+                  type="text"
+                  placeholder="NIC Asia, Global IME, eSewa"
+                  value={bankAccountName}
+                  onChange={(e) => setBankAccountName(e.target.value)}
+                  disabled={bankAccountSaving}
+                  className="finance-input"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={bankAccountSaving}
+                  className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs transition-colors"
+                >
+                  {editingBankAccountId ? <Pencil className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                  {editingBankAccountId ? "Save changes" : "Add account"}
+                </button>
+                {editingBankAccountId && (
+                  <button
+                    type="button"
+                    onClick={resetBankAccountForm}
+                    className="px-3 py-2 border border-zinc-800 rounded-xl text-xs text-zinc-400"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </form>
+
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              {bankAccounts.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-zinc-800 p-3 text-xs text-zinc-500">
+                  No bank accounts yet. Add one above and it will appear in transaction forms.
+                </div>
+              ) : (
+                bankAccounts.map((account) => (
+                  <div key={account.id} className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-2.5">
+                    <span className="text-sm font-semibold text-zinc-200">{account.name}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleEditBankAccount(account)}
+                        className="p-2 rounded-lg border border-zinc-800 text-zinc-400 hover:text-zinc-200"
+                        aria-label={`Edit ${account.name}`}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteBankAccount(account.id)}
+                        className="p-2 rounded-lg border border-rose-500/20 text-rose-400 hover:bg-rose-500/10"
+                        aria-label={`Delete ${account.name}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Custom category manager */}
+          <div className="finance-card">
+            <h4 className="text-xs font-bold text-white tracking-tight uppercase border-b border-zinc-800/60 pb-3.5 mb-5 flex items-center gap-2">
+              <Tag className="w-4 h-4 text-emerald-400" />
+              Custom Categories
+            </h4>
+
+            <p className="text-[10px] text-zinc-500 mb-4">Select exactly the default categories you want to see when recording an expense, then add any categories of your own.</p>
+
+            <div className="mb-5">
+              <p className="finance-label mb-2">Default expense categories</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.keys(CATEGORIES).filter((name) => name !== "Income").map((name) => {
+                  const isSelected = categories.some((category) => category.name === name);
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={() => handleDefaultCategoryToggle(name)}
+                      className={`px-3 py-2 rounded-xl border text-[10px] font-bold transition-colors ${isSelected ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-zinc-950 border-zinc-800 text-zinc-500 hover:text-zinc-300"}`}
+                      aria-pressed={isSelected}
+                    >
+                      {isSelected ? "✓ " : "+ "}{name}
+                    </button>
+                  );
+                })}
+                {categories.filter((category) => !category.isDefault).map((category) => (
+                  <div key={category.id} className="inline-flex items-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
+                    <span className="px-3 py-2 text-[10px] font-bold">{category.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleEditCategory(category)}
+                      className="p-2 border-l border-emerald-500/20 hover:bg-emerald-500/10"
+                      aria-label={`Edit ${category.name}`}
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteCategory(category.id)}
+                      className="p-2 border-l border-emerald-500/20 hover:bg-rose-500/10 hover:text-rose-400"
+                      aria-label={`Delete ${category.name}`}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {categoryError && (
+              <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/25 rounded-xl text-rose-400 text-xs font-semibold">
+                {categoryError}
+              </div>
+            )}
+
+            {categorySuccess && (
+              <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/25 rounded-xl text-emerald-400 text-xs font-semibold">
+                {categorySuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleCategorySubmit} className="space-y-3 mb-4">
+              <div>
+                <label htmlFor="custom-category-name" className="finance-label">
+                  {editingCategoryId ? "Edit category name" : "Add category name"}
+                </label>
+                <input
+                  id="custom-category-name"
+                  type="text"
+                  placeholder="e.g. Freelance, Pets, Subscriptions"
+                  value={categoryName}
+                  onChange={(e) => setCategoryName(e.target.value)}
+                  disabled={categorySaving}
+                  className="finance-input"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={categorySaving}
+                  className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs transition-colors disabled:opacity-60"
+                >
+                  {editingCategoryId ? <Pencil className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                  {editingCategoryId ? "Save changes" : "Add category"}
+                </button>
+                {editingCategoryId && (
+                  <button
+                    type="button"
+                    onClick={resetCategoryForm}
+                    className="px-3 py-2 border border-zinc-800 rounded-xl text-xs text-zinc-400"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </form>
+
           </div>
 
           {/* Monthly Budget caps editor */}
@@ -808,7 +1181,9 @@ export default function Settings() {
             </p>
             <div className="flex flex-col gap-3">
               <button
-                onClick={logout}
+                onClick={async () => {
+                  if (await confirm({ title: "Log out?", message: "You can sign back in at any time.", confirmLabel: "Log out", tone: "info" })) logout();
+                }}
                 className="w-full bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-zinc-300 border border-zinc-800 hover:border-zinc-700 font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs transition-all"
               >
                 <LogOut className="w-3.5 h-3.5" />
