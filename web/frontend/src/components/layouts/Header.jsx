@@ -1,12 +1,12 @@
 import { 
   CloudLightning, 
-  TrendingUp, 
   RefreshCw, 
   WifiOff 
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useFinance } from "../../context/FinanceContext";
 import UserAvatar from "../ui/UserAvatar";
+import BrandLogo from "../ui/BrandLogo";
 
 export default function Header({ activePage, setActivePage }) {
   const { user, isDemoMode } = useAuth();
@@ -55,7 +55,7 @@ export default function Header({ activePage, setActivePage }) {
         {/* Mobile Left Section: Mini Brand Icon & Title */}
         <div className="flex items-center gap-3 md:hidden">
           <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-400">
-            <TrendingUp className="w-4.5 h-4.5 stroke-[2.2]" />
+            <BrandLogo className="w-full h-full" />
           </div>
           <span className="font-bold text-white tracking-tight">KharchaFlow</span>
         </div>

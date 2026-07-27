@@ -13,7 +13,8 @@ import Goals from "./pages/Goals";
 import Settings from "./pages/Settings";
 import Admin from "./pages/Admin";
 import AddTransactionModal from "./components/transactions/AddTransactionModal";
-  import { TrendingUp, Download, X } from "lucide-react";
+  import { Download, X } from "lucide-react";
+  import BrandLogo from "./components/ui/BrandLogo";
 
 
 // Returns true when the page is running inside the installed Android APK
@@ -89,7 +90,7 @@ function AppContent() {
         <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-6 relative overflow-hidden bg-mesh-grid">
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none"></div>
           <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/25 flex items-center justify-center text-indigo-400 mb-2 animate-bounce">
-            <TrendingUp className="w-6 h-6 stroke-[2.2]" />
+            <BrandLogo className="w-full h-full" />
           </div>
           <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
           <p className="text-xs font-bold text-zinc-500 tracking-wider uppercase">Loading Finances...</p>

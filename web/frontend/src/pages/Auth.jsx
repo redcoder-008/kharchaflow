@@ -1,7 +1,6 @@
 import { useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import {
-  TrendingUp,
   Mail,
   Lock,
   User,
@@ -14,6 +13,7 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
+import BrandLogo from "../components/ui/BrandLogo";
 
 // ── Small inline Google SVG ──────────────────────────────────────────────────
 function GoogleIcon({ size = 16 }) {
@@ -242,7 +242,7 @@ export default function Auth() {
       {/* Brand Header */}
       <div className="flex flex-col items-center mb-8 text-center z-10">
         <div className="w-13 h-13 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4 shadow-sm">
-          <TrendingUp className="w-7 h-7 stroke-[2.2]" />
+          <BrandLogo className="w-full h-full" />
         </div>
         <h1 className="text-3xl font-extrabold tracking-tight text-white">
           KharchaFlow
