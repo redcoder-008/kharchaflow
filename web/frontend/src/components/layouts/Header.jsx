@@ -10,6 +10,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useFinance } from "../../context/FinanceContext";
 import UserAvatar from "../ui/UserAvatar";
+import BrandLogo from "../ui/BrandLogo";
 import { useNotifications } from "../../context/NotificationContext";
 
 export default function Header({ activePage, setActivePage }) {

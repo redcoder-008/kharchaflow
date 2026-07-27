@@ -5,6 +5,7 @@ import {
   Settings, 
   ShieldAlert,
   LogOut,
+  Download,
   Target,
   Cloud,
   UserCheck
@@ -101,6 +102,14 @@ export default function Sidebar({ activePage, setActivePage }) {
             </div>
           </div>
         )}
+
+        <a
+          href="/download"
+          className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium text-zinc-400 hover:bg-emerald-500/5 hover:text-emerald-400 border border-transparent hover:border-emerald-500/10 transition-all duration-150"
+        >
+          <Download className="w-5 h-5 stroke-[1.8]" />
+          Download Android App
+        </a>
 
         {/* Logout Action */}
         <button

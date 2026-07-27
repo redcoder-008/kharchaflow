@@ -14,6 +14,7 @@ import Analytics from "./pages/Analytics";
 import Goals from "./pages/Goals";
 import Settings from "./pages/Settings";
 import Admin from "./pages/Admin";
+import DownloadPage from "./pages/Download";
 import AddTransactionModal from "./components/transactions/AddTransactionModal";
 import PageSkeleton from "./components/ui/PageSkeleton";
 import BrandLogo from "./components/ui/BrandLogo";
@@ -184,10 +185,7 @@ function AppContent() {
         >
           <button
             onClick={() => {
-              const a = document.createElement("a");
-              a.href = "/kharchaflow.apk";
-              a.download = "KharchaFlow.apk";
-              a.click();
+              window.location.assign("/download");
             }}
             className="flex items-center gap-2 px-3 py-1.5 hover:bg-emerald-500/10 rounded-full transition-colors outline-none group"
           >
@@ -215,6 +213,11 @@ function AppContent() {
 }
 
 export default function App() {
+  // Public route: lets visitors download the Android app without an account.
+  if (window.location.pathname === "/download") {
+    return <DownloadPage />;
+  }
+
   return (
     <FeedbackProvider>
       <AuthProvider>
