@@ -5,7 +5,7 @@ import {
   Settings, 
   ShieldAlert,
   LogOut,
-  TrendingUp,
+  Download,
   Target,
   Cloud,
   UserCheck
@@ -13,6 +13,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useFeedback } from "../../context/FeedbackContext";
 import UserAvatar from "../ui/UserAvatar";
+import BrandLogo from "../ui/BrandLogo";
 
 export default function Sidebar({ activePage, setActivePage }) {
   const { user, logout, isDemoMode } = useAuth();
@@ -34,7 +35,7 @@ export default function Sidebar({ activePage, setActivePage }) {
       {/* Brand Header */}
       <div className="h-20 flex items-center px-6 border-b border-zinc-800/50 gap-3.5">
         <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-400">
-          <TrendingUp className="w-5.5 h-5.5 stroke-[2.2]" />
+          <BrandLogo className="w-full h-full" />
         </div>
         <div>
           <h1 className="text-xl font-bold tracking-tight text-white leading-none">KharchaFlow</h1>
@@ -101,6 +102,14 @@ export default function Sidebar({ activePage, setActivePage }) {
             </div>
           </div>
         )}
+
+        <a
+          href="/download"
+          className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium text-zinc-400 hover:bg-emerald-500/5 hover:text-emerald-400 border border-transparent hover:border-emerald-500/10 transition-all duration-150"
+        >
+          <Download className="w-5 h-5 stroke-[1.8]" />
+          Download Android App
+        </a>
 
         {/* Logout Action */}
         <button

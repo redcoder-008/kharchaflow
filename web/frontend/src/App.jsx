@@ -14,19 +14,23 @@ import Analytics from "./pages/Analytics";
 import Goals from "./pages/Goals";
 import Settings from "./pages/Settings";
 import Admin from "./pages/Admin";
+import DownloadPage from "./pages/Download";
 import AddTransactionModal from "./components/transactions/AddTransactionModal";
 import PageSkeleton from "./components/ui/PageSkeleton";
-  import { TrendingUp, Download, X } from "lucide-react";
-
+import BrandLogo from "./components/ui/BrandLogo";
+import { TrendingUp, Download, X } from "lucide-react";
 
 // Returns true when the page is running inside the installed Android APK
 // (Capacitor sets window.Capacitor; Android WebView adds "wv" or "Version/X.Y" to the UA).
 function isRunningInApk() {
   if (typeof window === "undefined") return false;
-  if (window.Capacitor?.isNativePlatform?.() || window.Capacitor?.platform) return true;
+  if (window.Capacitor?.isNativePlatform?.() || window.Capacitor?.platform)
+    return true;
   const ua = navigator.userAgent || "";
   // "wv" or "Version/4.0" (standard WebView indicator) check
-  return /Android/i.test(ua) && (/wv/i.test(ua) || /Version\/\d+\.\d+/i.test(ua));
+  return (
+    /Android/i.test(ua) && (/wv/i.test(ua) || /Version\/\d+\.\d+/i.test(ua))
+  );
 }
 
 function AppContent() {
@@ -89,18 +93,22 @@ function AppContent() {
   // Premium loading screen during app boot up
   if (loading) {
     return (
-        <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-6 relative overflow-hidden bg-mesh-grid">
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none"></div>
-          <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/25 flex items-center justify-center text-indigo-400 mb-2 animate-bounce">
-            <TrendingUp className="w-6 h-6 stroke-[2.2]" />
-          </div>
-          <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-xs font-bold text-zinc-500 tracking-wider uppercase">Loading Finances...</p>
-          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 flex flex-col items-center animate-fade-in">
-            <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-indigo-200">Your money. Your rules.</h1>
-            <p className="mt-1 text-sm text-zinc-300">Your KharchaFlow.</p>
-          </div>
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-6 relative overflow-hidden bg-mesh-grid">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none"></div>
+        <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/25 flex items-center justify-center text-indigo-400 mb-2 animate-bounce">
+          <BrandLogo className="w-full h-full" />
         </div>
+        <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-xs font-bold text-zinc-500 tracking-wider uppercase">
+          Loading Finances...
+        </p>
+        <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 flex flex-col items-center animate-fade-in">
+          <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-indigo-200">
+            Your money. Your rules.
+          </h1>
+          <p className="mt-1 text-sm text-zinc-300">Your KharchaFlow.</p>
+        </div>
+      </div>
     );
   }
 
@@ -112,9 +120,7 @@ function AppContent() {
   // Render Page Content dynamically based on state routing
   const renderPage = () => {
     if (financeLoading) {
-      return (
-        <PageSkeleton />
-      );
+      return <PageSkeleton />;
     }
 
     switch (activePage) {
@@ -137,7 +143,6 @@ function AppContent() {
 
   return (
     <div className="h-full bg-zinc-950 flex md:pl-64 text-zinc-100 bg-mesh-grid relative overflow-hidden">
-      
       {/* Decorative Grid Backdrop */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808005_1px,transparent_1px),linear-gradient(to_bottom,#80808005_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none"></div>
 
@@ -146,7 +151,6 @@ function AppContent() {
 
       {/* Main content pane */}
       <div className="flex-1 flex flex-col min-w-0 z-10 overflow-hidden">
-        
         {/* Sticky top header bar */}
         <Header activePage={activePage} setActivePage={setActivePage} />
 
@@ -157,16 +161,16 @@ function AppContent() {
       </div>
 
       {/* Mobile bottom navigation bar with quick add slot */}
-      <BottomNav 
-        activePage={activePage} 
-        setActivePage={setActivePage} 
-        onQuickAddClick={() => setIsQuickAddOpen(true)} 
+      <BottomNav
+        activePage={activePage}
+        setActivePage={setActivePage}
+        onQuickAddClick={() => setIsQuickAddOpen(true)}
       />
 
       {/* Sliding Quick Add Modal drawer */}
-      <AddTransactionModal 
-        isOpen={isQuickAddOpen} 
-        onClose={() => setIsQuickAddOpen(false)} 
+      <AddTransactionModal
+        isOpen={isQuickAddOpen}
+        onClose={() => setIsQuickAddOpen(false)}
         setActivePage={setActivePage}
       />
 
@@ -174,14 +178,14 @@ function AppContent() {
       {showApkBanner && !isRunningInApk() && (
         <div
           className="md:hidden fixed right-4 z-50 flex items-center bg-zinc-900 border border-emerald-500/30 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.2)] p-1 animate-slide-up backdrop-blur-md"
-          style={{ bottom: 'calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
+          style={{
+            bottom:
+              "calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 0.75rem)",
+          }}
         >
-          <button 
+          <button
             onClick={() => {
-              const a = document.createElement("a");
-              a.href = "/kharchaflow.apk";
-              a.download = "KharchaFlow.apk";
-              a.click();
+              window.location.assign("/download");
             }}
             className="flex items-center gap-2 px-3 py-1.5 hover:bg-emerald-500/10 rounded-full transition-colors outline-none group"
           >
@@ -189,11 +193,13 @@ function AppContent() {
               <Download className="w-3.5 h-3.5" />
             </div>
             <div className="text-left pr-1">
-              <p className="text-[11px] font-bold text-zinc-200 leading-none">Install APK</p>
+              <p className="text-[11px] font-bold text-zinc-200 leading-none">
+                Install APK
+              </p>
             </div>
           </button>
           <div className="w-px h-5 bg-zinc-800 mx-0.5"></div>
-          <button 
+          <button
             onClick={() => setShowApkBanner(false)}
             className="p-1.5 text-zinc-500 hover:text-rose-400 rounded-full transition-colors outline-none mr-0.5"
             aria-label="Close banner"
@@ -207,6 +213,11 @@ function AppContent() {
 }
 
 export default function App() {
+  // Public route: lets visitors download the Android app without an account.
+  if (window.location.pathname === "/download") {
+    return <DownloadPage />;
+  }
+
   return (
     <FeedbackProvider>
       <AuthProvider>

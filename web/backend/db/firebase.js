@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
+import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { localDB } from "./storage";
 import { TestTube } from "lucide-react";
@@ -40,11 +40,6 @@ if (hasValidConfig) {
     auth = getAuth(app);
     db = getFirestore(app);
     
-    // Enable offline persistence
-    enableIndexedDbPersistence(db).catch((err) => {
-      console.warn("Failed to enable offline persistence: ", err.code);
-    });
-
     storage = getStorage(app);
     googleProvider = new GoogleAuthProvider();
   } catch (error) {
