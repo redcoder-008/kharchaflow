@@ -17,6 +17,7 @@ import DownloadPage from "./pages/Download";
 import AddTransactionModal from "./components/transactions/AddTransactionModal";
 import PageSkeleton from "./components/ui/PageSkeleton";
 import BrandLogo from "./components/ui/BrandLogo";
+import { Download, X } from "lucide-react";
 
 function isRunningInApk() {
   return Boolean(window.Capacitor?.isNativePlatform?.() || window.Capacitor?.platform);

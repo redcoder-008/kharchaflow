@@ -3,7 +3,7 @@ import { jsPDF } from "jspdf";
 import { useFinance } from "../context/FinanceContext";
 import { useCalendar } from "../context/CalendarContext";
 import { useFeedback } from "../context/FeedbackContext";
-import { formatCurrency, formatDate, getPreferredCurrency } from "../utils/helpers";
+import { formatDate, getPreferredCurrency } from "../utils/helpers";
 import { CATEGORIES, PAYMENT_METHODS } from "../utils/constants";
 import { 
   Search, 
@@ -363,7 +363,7 @@ export default function History() {
                         <span className="text-zinc-500">Deleted {tx.deletedAt ? new Date(tx.deletedAt).toLocaleDateString() : "recently"}</span>
                       </div>
                       <p className="text-sm font-bold text-zinc-200 truncate mt-1">{tx.notes || "No details"}</p>
-                      <p className="text-xs text-zinc-500 mt-1">{tx.category} · {tx.paymentMethod}{tx.provider ? ` (${tx.provider})` : ""} · <span className={isIncome ? "text-emerald-400" : "text-zinc-300"}>{isIncome ? "+" : "-"}{formatCurrency(tx.amount)}</span></p>
+                      <p className="text-xs text-zinc-500 mt-1">{tx.category} · {tx.paymentMethod}{tx.provider ? ` (${tx.provider})` : ""} · <span className={isIncome ? "text-emerald-400" : "text-zinc-300"}><CurrencyValue value={tx.amount} sign={isIncome ? "+" : "-"} /></span></p>
                     </div>
                     <div className="flex shrink-0 gap-2">
                       <button onClick={() => restoreTransaction(tx.id)} className="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-[10px] font-bold flex items-center gap-1.5 transition-colors">

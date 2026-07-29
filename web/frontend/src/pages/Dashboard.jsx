@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useFinance } from "../context/FinanceContext";
 import { useCalendar } from "../context/CalendarContext";
-import { formatCurrency, formatDate, formatMonth } from "../utils/helpers";
+import { formatDate, formatMonth } from "../utils/helpers";
 import { CATEGORIES } from "../utils/constants";
 import {
   TrendingUp,
@@ -524,7 +524,7 @@ export default function Dashboard() {
                                   {payload[0].name}:{" "}
                                 </span>
                                 <span className="font-bold text-emerald-400">
-                                  {formatCurrency(payload[0].value)}
+                                  <CurrencyValue value={payload[0].value} />
                                 </span>
                               </div>
                             );
@@ -581,10 +581,10 @@ export default function Dashboard() {
                                 {payload[0].payload.name}
                               </p>
                               <p className="text-xs text-emerald-400 font-semibold">
-                                Income: {formatCurrency(payload[0].value)}
+                                Income: <CurrencyValue value={payload[0].value} />
                               </p>
                               <p className="text-xs text-rose-400 font-semibold">
-                                Expense: {formatCurrency(payload[1].value)}
+                                Expense: <CurrencyValue value={payload[1].value} />
                               </p>
                             </div>
                           );

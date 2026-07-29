@@ -214,7 +214,7 @@ export default function Analytics() {
             <div>
               <h4 className="text-xs font-bold text-white tracking-tight uppercase">Daily Spending — {formatMonth(`${activeMonth}-01`, dateSystem)}</h4>
               <p className="text-xs text-zinc-500 font-medium mt-0.5">
-                Total monthly spending: <span className="text-emerald-400 font-bold">{formatCurrency(totalMonthlySpend)}</span>
+                Total monthly spending: <span className="text-emerald-400 font-bold"><CurrencyValue value={totalMonthlySpend} /></span>
               </p>
             </div>
             <TrendingDown className="w-5 h-5 text-rose-400" />
@@ -237,7 +237,7 @@ export default function Analytics() {
                         <div className="custom-chart-tooltip">
                           <p className="text-[10px] text-zinc-500 font-bold uppercase mb-0.5">{payload[0].payload.date}</p>
                           <span className="font-semibold text-zinc-300">Spent: </span>
-                          <span className="font-bold text-emerald-400">{formatCurrency(payload[0].value)}</span>
+                          <span className="font-bold text-emerald-400"><CurrencyValue value={payload[0].value} /></span>
                         </div>
                       );
                     }
@@ -389,8 +389,8 @@ export default function Analytics() {
                       ></div>
                     </div>
                     <div className="flex justify-between items-center text-[10px] text-zinc-500 font-semibold pt-1">
-                      <span>Spent: <strong className={isOver ? "text-rose-400" : "text-zinc-400"}>{formatCurrency(b.spent)}</strong></span>
-                      <span>Limit: <strong>{formatCurrency(b.limit)}</strong></span>
+                      <span>Spent: <strong className={isOver ? "text-rose-400" : "text-zinc-400"}><CurrencyValue value={b.spent} /></strong></span>
+                      <span>Limit: <strong><CurrencyValue value={b.limit} /></strong></span>
                     </div>
                   </div>
                 </div>
@@ -418,7 +418,7 @@ export default function Analytics() {
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-zinc-400 font-medium">{m.name}</span>
                     <span className="text-zinc-200 font-bold">
-                      {formatCurrency(m.value)}{" "}
+                      <CurrencyValue value={m.value} />{" "}
                       <span className="text-[10px] text-zinc-500 font-normal">({m.pct}%)</span>
                     </span>
                   </div>

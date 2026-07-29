@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useFinance } from "../../context/FinanceContext";
 import { useCalendar } from "../../context/CalendarContext";
 import { CATEGORIES, PAYMENT_METHODS, EWALLET_PROVIDERS } from "../../utils/constants";
-import { formatCurrency, nepaliDateInputToIso, toNepaliDateInput } from "../../utils/helpers";
+import { nepaliDateInputToIso, toNepaliDateInput } from "../../utils/helpers";
 import CurrencyValue from "../ui/CurrencyValue";
 import { 
   X, 

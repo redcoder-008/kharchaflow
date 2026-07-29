@@ -20,6 +20,7 @@ import { useCalendar } from "../context/CalendarContext";
 import { useFeedback } from "../context/FeedbackContext";
 import { formatDate, formatMonth, formatCurrency } from "../utils/helpers";
 import { createInAppNotification } from "../context/NotificationContext";
+import CurrencyValue from "../components/ui/CurrencyValue";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const fmt = (n) => formatCurrency(n);
@@ -55,7 +56,7 @@ function StatCard({ icon: Icon, label, value, sub, color = "indigo", loading }) 
         </div>
       ) : (
         <>
-          <p className="text-2xl font-bold text-white font-['Outfit']">{value}</p>
+          <p className="numeric-value overflow-hidden text-ellipsis whitespace-nowrap text-2xl font-bold text-white font-['Outfit']">{value}</p>
           <p className="text-xs font-semibold text-zinc-500 mt-0.5 uppercase tracking-wider">{label}</p>
           {sub && <p className="text-xs text-zinc-600 mt-1">{sub}</p>}
         </>
@@ -535,7 +536,7 @@ export default function Admin() {
                         <td className="py-2.5 text-zinc-400 text-xs">{tx.category || "—"}</td>
                         <td className="py-2.5 text-zinc-400 text-xs">{tx.paymentMethod || "—"}</td>
                         <td className={`py-2.5 text-right font-bold text-xs ${tx.type === "income" ? "text-emerald-400" : "text-rose-400"}`}>
-                          {tx.type === "income" ? "+" : "-"}{fmt(tx.amount)}
+                          <CurrencyValue value={tx.amount} sign={tx.type === "income" ? "+" : "-"} className="currency-value--cell" />
                         </td>
                         <td className="py-2.5 text-right text-zinc-500 text-xs">{tx.date ? formatDate(tx.date, dateSystem) : "—"}</td>
                       </tr>
@@ -708,7 +709,7 @@ export default function Admin() {
                       <td className="p-4 text-xs text-zinc-400">{tx.category || "—"}</td>
                       <td className="p-4 text-xs text-zinc-400">{tx.paymentMethod || "—"}</td>
                       <td className={`p-4 text-sm font-bold ${tx.type === "income" ? "text-emerald-400" : "text-rose-400"}`}>
-                        {tx.type === "income" ? "+" : "-"}{fmt(tx.amount)}
+                        <CurrencyValue value={tx.amount} sign={tx.type === "income" ? "+" : "-"} className="currency-value--cell" />
                       </td>
                       <td className="p-4 text-xs text-zinc-500">{tx.date ? formatDate(tx.date, dateSystem) : "—"}</td>
                     </tr>
