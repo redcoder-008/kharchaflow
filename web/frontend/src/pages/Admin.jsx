@@ -26,10 +26,16 @@ import CurrencyValue from "../components/ui/CurrencyValue";
 const fmt = (n) => formatCurrency(n);
 
 const fmtNum = (n) => new Intl.NumberFormat("en-IN").format(n ?? 0);
+const ADMIN_EMAILS = new Set(["redcoder008@gmail.com", "kharchaflow@gmail.com"]);
 const toDate = (value) => {
   if (!value) return null;
   const date = value?.toDate ? value.toDate() : new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
+};
+const isNewUser = (createdAt) => {
+  const joinedAt = toDate(createdAt);
+  const age = joinedAt ? Date.now() - joinedAt.getTime() : Infinity;
+  return age >= 0 && age < 24 * 60 * 60 * 1000;
 };
 
 function StatCard({ icon: Icon, label, value, sub, color = "indigo", loading }) {
@@ -254,7 +260,12 @@ export default function Admin() {
       const userData = [];
       const currentUids = new Set();
       snap.forEach((d) => {
-        userData.push({ uid: d.id, ...d.data() });
+        const data = d.data();
+        userData.push({
+          uid: d.id,
+          ...data,
+          isAdmin: data.isAdmin === true || ADMIN_EMAILS.has(data.email?.toLowerCase()),
+        });
         currentUids.add(d.id);
       });
       latestUsers = userData;
@@ -638,7 +649,14 @@ export default function Admin() {
                           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500/30 to-violet-500/30 border border-indigo-500/20 flex items-center justify-center text-xs font-bold text-indigo-300">
                             {(u.displayName || u.email || "?").charAt(0).toUpperCase()}
                           </div>
-                          <p className="text-sm font-semibold text-zinc-200">{u.displayName || "—"}</p>
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <p className="truncate text-sm font-semibold text-zinc-200">{u.displayName || "—"}</p>
+                            {isNewUser(u.createdAt) && (
+                              <span className="shrink-0 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-300">
+                                New
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="p-4">

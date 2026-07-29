@@ -18,6 +18,11 @@ import { localDB } from "../../../backend/db/storage";
 import { useFeedback } from "./FeedbackContext";
 
 const AuthContext = createContext();
+const ADMIN_EMAILS = new Set([
+  "redcoder008@gmail.com",
+  "kharchaflow@gmail.com",
+]);
+const isAdminEmail = (email) => ADMIN_EMAILS.has(email?.toLowerCase());
 
 export function useAuth() {
   return useContext(AuthContext);
@@ -78,7 +83,7 @@ export function AuthProvider({ children }) {
             // Default admin flag from Firestore
             isAdmin = data.isAdmin === true;
             // Override admin for specific email
-            if (firebaseUser.email?.toLowerCase() === "redcoder008@gmail.com") {
+            if (isAdminEmail(firebaseUser.email)) {
               isAdmin = true;
             }
             phone = data.phone || "";
@@ -96,7 +101,7 @@ export function AuthProvider({ children }) {
           console.error("Failed to fetch user role: ", err);
         }
         // Ensure admin override for specific email even if user document does not exist
-        if (firebaseUser.email?.toLowerCase() === "redcoder008@gmail.com") {
+        if (isAdminEmail(firebaseUser.email)) {
           isAdmin = true;
         }
 
