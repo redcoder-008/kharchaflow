@@ -3,16 +3,20 @@ import {
   Receipt, 
   BarChart3, 
   Settings,
+  ShieldAlert,
   Plus
 } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 export default function BottomNav({ activePage, setActivePage, onQuickAddClick }) {
+  const { user } = useAuth();
   const menuItems = [
     { id: "dashboard", label: "Overview", icon: LayoutDashboard },
     { id: "history", label: "History", icon: Receipt },
     { id: "placeholder", label: "", icon: null }, // Spacer for FAB
     { id: "analytics", label: "Analytics", icon: BarChart3 },
-    { id: "settings", label: "Settings", icon: Settings }
+    { id: "settings", label: "Settings", icon: Settings },
+    ...(user?.isAdmin ? [{ id: "admin", label: "Admin", icon: ShieldAlert }] : [])
   ];
 
   return (
@@ -25,7 +29,10 @@ export default function BottomNav({ activePage, setActivePage, onQuickAddClick }
       className="fixed bottom-0 inset-x-0 bg-zinc-900/95 backdrop-blur-md border-t border-zinc-800/80 md:hidden z-40"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      <div className="relative h-16 grid grid-cols-5 max-w-md mx-auto items-center px-2">
+      <div
+        className="relative h-16 grid max-w-md mx-auto items-center px-2"
+        style={{ gridTemplateColumns: `repeat(${menuItems.length}, minmax(0, 1fr))` }}
+      >
         {menuItems.map((item) => {
           if (item.id === "placeholder") {
             return (

@@ -14,7 +14,7 @@ import { useFeedback } from "../../context/FeedbackContext";
 import UserAvatar from "../ui/UserAvatar";
 import BrandLogo from "../ui/BrandLogo";
 
-export default function Sidebar({ activePage, setActivePage }) {
+export default function Sidebar({ activePage, setActivePage, showDownloadLink = true }) {
   const { user, logout, isDemoMode } = useAuth();
   const { confirm } = useFeedback();
 
@@ -101,13 +101,13 @@ export default function Sidebar({ activePage, setActivePage }) {
           </div>
         )}
 
-        <a
+        {showDownloadLink && <a
           href="/download"
           className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium text-zinc-400 hover:bg-emerald-500/5 hover:text-emerald-400 border border-transparent hover:border-emerald-500/10 transition-all duration-150"
         >
           <Download className="w-5 h-5 stroke-[1.8]" />
           Download Android App
-        </a>
+        </a>}
 
         {/* Logout Action */}
         <button

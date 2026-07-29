@@ -20,7 +20,9 @@ import BrandLogo from "./components/ui/BrandLogo";
 import { Download, X } from "lucide-react";
 
 function isRunningInApk() {
-  return Boolean(window.Capacitor?.isNativePlatform?.() || window.Capacitor?.platform);
+  if (window.Capacitor?.isNativePlatform?.() || window.Capacitor?.platform) return true;
+  const userAgent = navigator.userAgent || "";
+  return /Android/i.test(userAgent) && (/\bwv\b/i.test(userAgent) || /Version\/\d+\.\d+/i.test(userAgent));
 }
 
 function AppContent() {
@@ -30,6 +32,7 @@ function AppContent() {
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   // The download entry now lives in the mobile top bar; keep the legacy banner hidden.
   const [showApkBanner, setShowApkBanner] = useState(false);
+  const isNativeApp = isRunningInApk();
 
   // Programmatically hide the splash screen when app loading finishes
   useEffect(() => {
@@ -125,12 +128,12 @@ function AppContent() {
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808005_1px,transparent_1px),linear-gradient(to_bottom,#80808005_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none"></div>
 
       {/* Desktop Sidebar navigation */}
-      <Sidebar activePage={activePage} setActivePage={setActivePage} />
+      <Sidebar activePage={activePage} setActivePage={setActivePage} showDownloadLink={!isNativeApp} />
 
       {/* Main content pane */}
       <div className="flex-1 flex flex-col min-w-0 z-10 overflow-hidden">
         {/* Sticky top header bar */}
-        <Header activePage={activePage} setActivePage={setActivePage} />
+        <Header activePage={activePage} setActivePage={setActivePage} showDownloadLink={!isNativeApp} />
 
         {/* Scrollable primary route wrapper — extra bottom padding on mobile so content clears the fixed bottom nav */}
         <main className="flex-grow p-4 md:p-8 pb-4 max-w-7xl w-full mx-auto overflow-y-auto mobile-page-bottom-pad md:pb-8 -webkit-overflow-scrolling-touch">
@@ -153,7 +156,7 @@ function AppContent() {
       />
 
       {/* Download APK Floating Banner — visible only in the mobile browser, never inside the APK */}
-      {showApkBanner && !isRunningInApk() && (
+      {showApkBanner && !isNativeApp && (
         <div
           className="md:hidden fixed right-4 z-50 flex items-center bg-zinc-900 border border-emerald-500/30 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.2)] p-1 animate-slide-up backdrop-blur-md"
           style={{

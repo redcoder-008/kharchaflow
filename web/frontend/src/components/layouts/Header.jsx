@@ -7,6 +7,7 @@ import {
   CheckCheck,
   BellRing,
   Download,
+  ShieldAlert,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useFinance } from "../../context/FinanceContext";
@@ -14,7 +15,7 @@ import UserAvatar from "../ui/UserAvatar";
 import BrandLogo from "../ui/BrandLogo";
 import { useNotifications } from "../../context/NotificationContext";
 
-export default function Header({ activePage, setActivePage }) {
+export default function Header({ activePage, setActivePage, showDownloadLink = true }) {
   const { user, isDemoMode } = useAuth();
   const { syncStatus } = useFinance();
   const {
@@ -103,13 +104,28 @@ export default function Header({ activePage, setActivePage }) {
         {/* Right Section: User Profile & Quick Actions */}
         {user && (
           <div className="flex items-center gap-2 md:gap-3">
-            <a
+            {showDownloadLink && <a
               href="/download"
               className="md:hidden p-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
               aria-label="Download Android app"
             >
               <Download className="w-4 h-4" />
-            </a>
+            </a>}
+
+            {user.isAdmin && (
+              <button
+                onClick={() => setActivePage("admin")}
+                className={`flex items-center gap-1.5 rounded-xl border px-2.5 py-2 text-[10px] font-bold transition-colors ${
+                  activePage === "admin"
+                    ? "border-indigo-400/50 bg-indigo-500/20 text-indigo-300"
+                    : "border-indigo-500/25 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20"
+                }`}
+                aria-label="Open Admin Dashboard"
+              >
+                <ShieldAlert className="w-4 h-4" />
+                <span>Admin</span>
+              </button>
+            )}
 
             {/* Sync Status Indicator */}
             {!isDemoMode && syncStatus && (
