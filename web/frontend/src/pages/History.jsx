@@ -25,6 +25,23 @@ const PDF_CHART_COLORS = [
   [5, 150, 105], [14, 116, 144], [124, 58, 237], [217, 119, 6],
   [190, 24, 93], [22, 163, 74], [2, 132, 199], [147, 51, 234]
 ];
+
+// jsPDF.save() depends on browser-specific download handling and frequently
+// fails in mobile WebViews. A real Blob URL plus an attached anchor works in
+// mobile browsers and Capacitor's Android WebView.
+const downloadBlob = (blob, fileName) => {
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = objectUrl;
+  anchor.download = fileName;
+  anchor.style.display = "none";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+
+  // Do not revoke immediately: Android WebView may still be reading the Blob.
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+};
 // jsPDF's built-in fonts do not include currency glyphs such as ₹, which can render as ?.
 const formatPdfCurrency = (value) => {
   const amount = Number(value) || 0;
@@ -139,12 +156,7 @@ export default function History() {
     ]);
     const csv = [headers, ...rows].map((row) => row.map(escapeCsvValue).join(",")).join("\r\n");
     const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${exportFileName}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, `${exportFileName}.csv`);
   };
 
   const downloadPdf = () => {
@@ -323,7 +335,8 @@ export default function History() {
         doc.line(14, y - 3.5, pageWidth - 14, y - 3.5);
       }
     });
-    doc.save(`${exportFileName}.pdf`);
+    const pdfBlob = doc.output("blob");
+    downloadBlob(pdfBlob, `${exportFileName}.pdf`);
   };
 
   return (

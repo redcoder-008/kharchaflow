@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Users, TrendingUp, TrendingDown, Activity, DollarSign,
   CreditCard, ArrowUpRight, ArrowDownRight, RefreshCw,
@@ -42,7 +42,7 @@ function StatCard({ icon: Icon, label, value, sub, color = "indigo", loading }) 
     sky: "bg-sky-500/10 text-sky-400 border-sky-500/20",
   };
   return (
-    <div className="bg-zinc-900/70 backdrop-blur border border-zinc-800/60 rounded-2xl p-5 hover:border-zinc-700/60 transition-all duration-200 group">
+    <div className="bg-zinc-900/70 backdrop-blur border border-zinc-800/60 rounded-2xl p-3.5 sm:p-5 hover:border-zinc-700/60 transition-all duration-200 group">
       <div className="flex items-start justify-between mb-4">
         <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${colors[color]}`}>
           <Icon className="w-5 h-5" />
@@ -56,7 +56,7 @@ function StatCard({ icon: Icon, label, value, sub, color = "indigo", loading }) 
         </div>
       ) : (
         <>
-          <p className="numeric-value overflow-hidden text-ellipsis whitespace-nowrap text-2xl font-bold text-white font-['Outfit']">{value}</p>
+          <p className="numeric-value overflow-hidden text-ellipsis whitespace-nowrap text-base sm:text-2xl font-bold text-white font-['Outfit']">{value}</p>
           <p className="text-xs font-semibold text-zinc-500 mt-0.5 uppercase tracking-wider">{label}</p>
           {sub && <p className="text-xs text-zinc-600 mt-1">{sub}</p>}
         </>
@@ -75,6 +75,16 @@ function SectionHeader({ title, icon: Icon }) {
 }
 
 const CHART_COLORS = ["#818cf8", "#34d399", "#f472b6", "#fb923c", "#a78bfa", "#38bdf8"];
+const CELEBRATION_PARTICLES = [
+  { symbol: "✦", left: "8%", top: "14%", delay: "0ms", size: "2rem" },
+  { symbol: "♥", left: "18%", top: "70%", delay: "180ms", size: "1.5rem" },
+  { symbol: "✦", left: "31%", top: "18%", delay: "90ms", size: "1.25rem" },
+  { symbol: "🎀", left: "43%", top: "77%", delay: "260ms", size: "1.75rem" },
+  { symbol: "♥", left: "57%", top: "13%", delay: "160ms", size: "1.5rem" },
+  { symbol: "✦", left: "68%", top: "72%", delay: "60ms", size: "2rem" },
+  { symbol: "🎀", left: "79%", top: "22%", delay: "220ms", size: "1.5rem" },
+  { symbol: "♥", left: "91%", top: "62%", delay: "120ms", size: "1.25rem" },
+];
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -110,6 +120,8 @@ export default function Admin() {
   const [selectedRecipients, setSelectedRecipients] = useState([]);
   const [notificationHistory, setNotificationHistory] = useState([]);
   const [sendingNotification, setSendingNotification] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const hasCelebratedThisVisit = useRef(false);
   const USERS_PER_PAGE = 8;
 
   // ── Real-time Data Listeners ────────────────────────────────────────────
@@ -286,6 +298,15 @@ export default function Admin() {
     setTimeout(() => setRefreshing(false), 1000);
   };
 
+  useEffect(() => {
+    if (loading || !stats?.newUsersMonth || hasCelebratedThisVisit.current) return undefined;
+
+    hasCelebratedThisVisit.current = true;
+    setShowCelebration(true);
+    const timer = window.setTimeout(() => setShowCelebration(false), 1900);
+    return () => window.clearTimeout(timer);
+  }, [loading, stats?.newUsersMonth]);
+
   // ── User actions (local state only – wire to Firestore for production) ────
   const toggleSuspend = (uid) => {
     setUsers(prev => prev.map(u => u.uid === uid ? { ...u, suspended: !u.suspended } : u));
@@ -351,22 +372,43 @@ export default function Admin() {
   ];
 
   return (
-    <div className="space-y-6 pb-20 md:pb-8 animate-fade-in">
+    <div className="space-y-5 sm:space-y-6 pb-20 md:pb-8 animate-fade-in">
+      {showCelebration && (
+        <div className="new-user-celebration" aria-live="polite" role="status">
+          {CELEBRATION_PARTICLES.map((particle, index) => (
+            <span
+              key={`${particle.symbol}-${index}`}
+              className="new-user-celebration__particle"
+              style={{ left: particle.left, top: particle.top, animationDelay: particle.delay, fontSize: particle.size }}
+              aria-hidden="true"
+            >
+              {particle.symbol}
+            </span>
+          ))}
+          <div className="new-user-celebration__message">
+            <span className="new-user-celebration__sparkle" aria-hidden="true">✦</span>
+            <p className="text-sm sm:text-base font-extrabold text-white">Amazing news!</p>
+            <p className="mt-1 text-xs sm:text-sm text-violet-100">
+              {stats.newUsersMonth} brilliant new {stats.newUsersMonth === 1 ? "member has" : "members have"} joined KharchaFlow this month.
+            </p>
+          </div>
+        </div>
+      )}
       {/* ── Header ── */}
-      <div className="flex items-center justify-between border-b border-zinc-800/60 pb-5">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-zinc-800/60 pb-5">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
             <ShieldCheck className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-white font-['Outfit']">Admin Dashboard</h2>
-            <p className="text-xs text-zinc-500 mt-0.5">Logged in as <span className="text-indigo-400">{user?.email}</span></p>
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white font-['Outfit']">Admin Dashboard</h2>
+            <p className="text-xs text-zinc-500 mt-0.5 truncate">Logged in as <span className="text-indigo-400">{user?.email}</span></p>
           </div>
         </div>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="flex items-center gap-2 px-3 py-2 text-xs font-bold bg-zinc-800/60 hover:bg-zinc-700/60 border border-zinc-700/50 rounded-xl text-zinc-300 transition-all"
+          className="self-start sm:self-auto flex items-center gap-2 px-3 py-2 text-xs font-bold bg-zinc-800/60 hover:bg-zinc-700/60 border border-zinc-700/50 rounded-xl text-zinc-300 transition-all"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
           Refresh
@@ -400,9 +442,9 @@ export default function Admin() {
           <div>
             <SectionHeader title="Key Metrics" icon={Activity} />
             {!loading && stats?.newUsersMonth > 0 && (
-              <div className="mb-4 flex items-center gap-3 rounded-2xl border border-violet-500/25 bg-violet-500/10 px-4 py-3 text-violet-200">
+              <div className="mb-4 flex items-center gap-3 rounded-2xl border border-violet-500/25 bg-violet-500/10 px-3 sm:px-4 py-3 text-violet-200">
                 <span className="text-xl animate-bounce" aria-hidden="true">🎉</span>
-                <p className="text-xs font-semibold"><span className="text-violet-300 font-bold">+{fmtNum(stats.newUsersMonth)}</span> new {stats.newUsersMonth === 1 ? "user has" : "users have"} joined this month.</p>
+                <p className="text-xs font-semibold"><span className="text-violet-300 font-bold">+{fmtNum(stats.newUsersMonth)}</span> fresh {stats.newUsersMonth === 1 ? "star has" : "stars have"} joined the KharchaFlow community this month.</p>
                 <span className="ml-auto text-sm animate-pulse" aria-hidden="true">✨</span>
               </div>
             )}

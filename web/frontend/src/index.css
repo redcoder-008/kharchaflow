@@ -181,6 +181,12 @@ table,
   line-height: 1.2;
 }
 
+@media (max-width: 639px) {
+  .currency-value--display {
+    font-size: clamp(0.72rem, 3.4vw, 1rem);
+  }
+}
+
 .currency-value--cell {
   display: block;
   min-width: 8.5ch;
@@ -211,6 +217,63 @@ table,
 
 .animate-fade-in {
   animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Brief welcome moment for new community members in the Admin dashboard. */
+.new-user-celebration {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  pointer-events: none;
+  background: radial-gradient(circle at center, rgba(139, 92, 246, 0.24), rgba(9, 9, 11, 0.08) 46%, transparent 72%);
+  animation: celebration-fade 1.9s ease-out forwards;
+}
+
+.new-user-celebration__message {
+  max-width: min(84vw, 26rem);
+  padding: 1.25rem 1.5rem;
+  text-align: center;
+  border: 1px solid rgba(196, 181, 253, 0.45);
+  border-radius: 1.25rem;
+  background: rgba(46, 16, 101, 0.88);
+  box-shadow: 0 20px 70px rgba(109, 40, 217, 0.4);
+  backdrop-filter: blur(10px);
+  animation: celebration-message 1.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.new-user-celebration__sparkle { color: #facc15; font-size: 1.4rem; }
+
+.new-user-celebration__particle {
+  position: absolute;
+  color: #f0abfc;
+  filter: drop-shadow(0 0 10px rgba(244, 114, 182, 0.65));
+  animation: celebration-particle 1.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes celebration-fade {
+  0%, 78% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes celebration-message {
+  0% { opacity: 0; transform: scale(0.76) translateY(16px); }
+  18%, 78% { opacity: 1; transform: scale(1) translateY(0); }
+  100% { opacity: 0; transform: scale(0.94) translateY(-8px); }
+}
+
+@keyframes celebration-particle {
+  0% { opacity: 0; transform: translateY(20px) scale(0.4) rotate(-18deg); }
+  18%, 72% { opacity: 1; transform: translateY(-16px) scale(1) rotate(12deg); }
+  100% { opacity: 0; transform: translateY(-62px) scale(0.7) rotate(28deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .new-user-celebration,
+  .new-user-celebration__message,
+  .new-user-celebration__particle { animation-duration: 0.01ms; }
 }
 
 

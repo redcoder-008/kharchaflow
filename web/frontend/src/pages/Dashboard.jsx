@@ -165,7 +165,7 @@ export default function Dashboard() {
         </div>
 
         {/* Monthly Income */}
-        <div className="finance-card flex flex-col justify-between min-h-36">
+        <div className="finance-card flex flex-col justify-between max-[374px]:col-span-2 min-h-36">
           <div className="flex justify-between items-center">
             <span className="text-xs font-semibold text-zinc-400">
               Monthly Income
@@ -185,7 +185,7 @@ export default function Dashboard() {
         </div>
 
         {/* Monthly Expense */}
-        <div className="finance-card flex flex-col justify-between min-h-36">
+        <div className="finance-card flex flex-col justify-between max-[374px]:col-span-2 min-h-36">
           <div className="flex justify-between items-center">
             <span className="text-xs font-semibold text-zinc-400">
               Monthly Expenses

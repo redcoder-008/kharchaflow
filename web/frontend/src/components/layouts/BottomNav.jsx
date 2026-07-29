@@ -3,20 +3,16 @@ import {
   Receipt, 
   BarChart3, 
   Settings,
-  ShieldAlert,
   Plus
 } from "lucide-react";
-import { useAuth } from "../../context/AuthContext";
 
 export default function BottomNav({ activePage, setActivePage, onQuickAddClick }) {
-  const { user } = useAuth();
   const menuItems = [
     { id: "dashboard", label: "Overview", icon: LayoutDashboard },
     { id: "history", label: "History", icon: Receipt },
     { id: "placeholder", label: "", icon: null }, // Spacer for FAB
     { id: "analytics", label: "Analytics", icon: BarChart3 },
-    { id: "settings", label: "Settings", icon: Settings },
-    ...(user?.isAdmin ? [{ id: "admin", label: "Admin", icon: ShieldAlert }] : [])
+    { id: "settings", label: "Settings", icon: Settings }
   ];
 
   return (
