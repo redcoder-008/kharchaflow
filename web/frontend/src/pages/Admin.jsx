@@ -7,7 +7,8 @@ import {
 
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { db } from "../../../backend/db/firebase";
+import { db, functions } from "../../../backend/db/firebase";
+import { httpsCallable } from "firebase/functions";
 import {
   collection, collectionGroup, getDocs, doc, getDoc,
   query, orderBy, limit, where, Timestamp,onSnapshot, addDoc
@@ -323,9 +324,21 @@ export default function Admin() {
     setUsers(prev => prev.map(u => u.uid === uid ? { ...u, suspended: !u.suspended } : u));
   };
   const removeUser = async (uid) => {
-    if (!await confirm({ title: "Delete user?", message: "This action cannot be undone. User data may require a server-side cleanup as well.", confirmLabel: "Delete user", tone: "danger" })) return;
-    setUsers(prev => prev.filter(u => u.uid !== uid));
-    notify("The user was removed from this view. Configure a server-side admin action to delete their authentication account.", "info");
+    if (!await confirm({ title: "Delete user permanently?", message: "This permanently deletes the user's sign-in account and all KharchaFlow data. This cannot be undone.", confirmLabel: "Delete user", tone: "danger" })) return;
+    if (!functions) {
+      notify("User deletion is unavailable because Firebase Functions is not configured.", "danger");
+      return;
+    }
+
+    try {
+      await httpsCallable(functions, "deleteManagedUser")({ uid });
+      setUsers(prev => prev.filter(userItem => userItem.uid !== uid));
+      setRecentTx(prev => prev.filter(transaction => transaction.uid !== uid));
+      notify("User account and associated data were deleted.", "success");
+    } catch (error) {
+      console.error("Admin user deletion failed:", error);
+      notify(error.message || "Unable to delete this user. Please try again.", "danger");
+    }
   };
   useEffect(() => {
     if (!db) return undefined;

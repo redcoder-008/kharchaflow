@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getFunctions } from "firebase/functions";
 import { getStorage } from "firebase/storage";
 import { localDB } from "./storage";
 import { TestTube } from "lucide-react";
@@ -10,6 +11,7 @@ let auth = null;
 let db = null;
 let googleProvider = null;
 let storage = null;
+let functions = null;
 
 const savedConfig = localDB.getFirebaseConfig();
 
@@ -39,6 +41,7 @@ if (hasValidConfig) {
     }
     auth = getAuth(app);
     db = getFirestore(app);
+    functions = getFunctions(app);
     
     storage = getStorage(app);
     googleProvider = new GoogleAuthProvider();
@@ -47,7 +50,7 @@ if (hasValidConfig) {
   }
 }
 
-export { app, auth, db, googleProvider, storage, hasValidConfig };
+export { app, auth, db, functions, googleProvider, storage, hasValidConfig };
 export function reloadFirebaseApp(newConfig) {
   if (newConfig) {
     localDB.saveFirebaseConfig(newConfig);

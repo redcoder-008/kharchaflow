@@ -139,6 +139,9 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
   const resultingBalance = type === "expense" 
     ? availableBalance - numericAmount 
     : availableBalance + numericAmount;
+  const notesPlaceholder = type === "income"
+    ? "e.g. Monthly salary, freelance payment, or savings interest"
+    : "e.g. Grocery shopping, lunch, or travel fare";
 
   if (!isOpen) return null;
 
@@ -457,7 +460,7 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
             <div className="relative">
               <textarea
                 id="notes"
-                placeholder="e.g. Starbucks house coffee with friends"
+                placeholder={notesPlaceholder}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={2}
