@@ -61,7 +61,7 @@ export default function Header({ activePage, setActivePage }) {
   };
 
   return (
-    <header className="sticky top-0 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800/50 z-20 w-full">
+    <header className="sticky top-0 mobile-safe-top bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800/50 z-20 w-full">
       {/* Demo Mode Alert Banner */}
       {isDemoMode && (
         <div className="bg-emerald-500/10 border-b border-emerald-500/10 py-2 px-4 md:px-8 text-center flex items-center justify-center gap-2">

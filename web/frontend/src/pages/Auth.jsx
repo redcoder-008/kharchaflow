@@ -240,7 +240,7 @@ export default function Auth() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-dvh mobile-safe-top bg-zinc-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
       {/* Decorative Grid Overlay */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
 

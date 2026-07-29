@@ -17,6 +17,7 @@ import {
   RotateCcw
 } from "lucide-react";
 import AddTransactionModal from "../components/transactions/AddTransactionModal";
+import CurrencyValue from "../components/ui/CurrencyValue";
 
 const escapeCsvValue = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
 const pdfSafeText = (value) => String(value ?? "").replace(/[^\x20-\x7E]/g, "?");
@@ -627,7 +628,7 @@ export default function History() {
                         
                         {/* Amount */}
                         <td className={`py-4.5 text-right font-bold pr-2 ${isIncome ? "text-emerald-400" : "text-zinc-200"}`}>
-                          {isIncome ? "+" : "-"}{formatCurrency(tx.amount)}
+                          <CurrencyValue value={tx.amount} sign={isIncome ? "+" : "-"} className="currency-value--cell" />
                         </td>
                         
                         {/* Actions */}
@@ -677,7 +678,7 @@ export default function History() {
                         </h5>
                       </div>
                       <span className={`text-xs font-bold ${isIncome ? "text-emerald-400" : "text-zinc-300"}`}>
-                        {isIncome ? "+" : "-"}{formatCurrency(tx.amount)}
+                        <CurrencyValue value={tx.amount} sign={isIncome ? "+" : "-"} />
                       </span>
                     </div>
 

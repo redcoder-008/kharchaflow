@@ -3,6 +3,7 @@ import { useFinance } from "../../context/FinanceContext";
 import { useCalendar } from "../../context/CalendarContext";
 import { CATEGORIES, PAYMENT_METHODS, EWALLET_PROVIDERS } from "../../utils/constants";
 import { formatCurrency, nepaliDateInputToIso, toNepaliDateInput } from "../../utils/helpers";
+import CurrencyValue from "../ui/CurrencyValue";
 import { 
   X, 
   Calendar,
@@ -211,7 +212,7 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
 
       {/* Main Drawer Shell */}
       <div
-        className="w-full md:max-w-xl bg-zinc-900 border border-zinc-800 md:rounded-3xl rounded-t-3xl shadow-2xl relative z-10 flex flex-col animate-slide-up md:animate-none overflow-visible"
+        className="w-full md:max-w-xl bg-zinc-900 border border-zinc-800 md:rounded-3xl rounded-t-3xl shadow-2xl relative z-10 flex flex-col animate-slide-up md:animate-none overflow-hidden"
         style={{
           /* Mobile: cap to 90dvh so it shrinks with keyboard and never covers bottom nav */
           maxHeight: 'min(90dvh, calc(100dvh - env(safe-area-inset-bottom, 0px)))',
@@ -232,7 +233,7 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
         </div>
 
         {/* Form Container */}
-        <form onSubmit={handleSave} className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+        <form onSubmit={handleSave} className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-5">
           
           {/* Validation Error alerts */}
           {error && (
@@ -292,14 +293,14 @@ export default function AddTransactionModal({ isOpen, onClose, editingTransactio
               <div className="text-xs flex justify-between items-center">
                 <span className="text-zinc-550 font-medium">Available Balance:</span>
                 <span className={`font-bold ${availableBalance < 0 ? "text-rose-500" : "text-zinc-350"}`}>
-                  {formatCurrency(availableBalance)}
+                  <CurrencyValue value={availableBalance} />
                 </span>
               </div>
               {numericAmount > 0 && (
                 <div className="text-xs flex justify-between items-center border-t border-zinc-850/40 pt-1.5">
                   <span className="text-zinc-550 font-medium">Resulting Balance:</span>
                   <span className={`font-extrabold ${resultingBalance < 0 ? "text-rose-500" : "text-emerald-400"}`}>
-                    {formatCurrency(resultingBalance)}
+                    <CurrencyValue value={resultingBalance} />
                   </span>
                 </div>
               )}

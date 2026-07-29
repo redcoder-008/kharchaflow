@@ -3,6 +3,7 @@ import { useFinance } from "../context/FinanceContext";
 import { useCalendar } from "../context/CalendarContext";
 import { useFeedback } from "../context/FeedbackContext";
 import { formatCurrency, formatDate } from "../utils/helpers";
+import CurrencyValue from "../components/ui/CurrencyValue";
 import { AlertCircle, CheckCircle2, CirclePlus, Pencil, Plus, Target, Trash2, WalletCards, X } from "lucide-react";
 
 const blankGoal = { name: "", targetAmount: "", currentAmount: "", targetDate: "" };
@@ -124,11 +125,11 @@ export default function Goals() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="finance-card">
           <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Goals Saved</p>
-          <p className="mt-2 text-xl font-bold text-emerald-400">{formatCurrency(summary.saved)}</p>
+          <p className="mt-2 text-xl font-bold text-emerald-400"><CurrencyValue value={summary.saved} className="currency-value--display" /></p>
         </div>
         <div className="finance-card">
           <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Targeted Savings</p>
-          <p className="mt-2 text-xl font-bold text-zinc-100">{formatCurrency(summary.target)}</p>
+          <p className="mt-2 text-xl font-bold text-zinc-100"><CurrencyValue value={summary.target} className="currency-value--display" /></p>
         </div>
         <div className="finance-card">
           <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Completed Goals</p>

@@ -27,6 +27,7 @@ import {
   Tooltip,
 } from "recharts";
 import AddTransactionModal from "../components/transactions/AddTransactionModal";
+import CurrencyValue from "../components/ui/CurrencyValue";
 import { useFeedback } from "../context/FeedbackContext";
 
 export default function Dashboard() {
@@ -155,7 +156,7 @@ export default function Dashboard() {
             <h3
               className={`text-2xl font-bold tracking-tight mt-4 ${totals.net < 0 ? "text-rose-500 font-extrabold animate-pulse" : "text-white"}`}
             >
-              {formatCurrency(totals.net)}
+              <CurrencyValue value={totals.net} className="currency-value--display" />
             </h3>
             <p className="text-[10px] text-zinc-500 font-semibold uppercase mt-1">
               Overall Net Assets
@@ -175,7 +176,7 @@ export default function Dashboard() {
           </div>
           <div>
             <h3 className="text-xl font-bold tracking-tight text-emerald-400 mt-4">
-              {formatCurrency(stats.income)}
+              <CurrencyValue value={stats.income} className="currency-value--display" />
             </h3>
             <p className="text-[10px] text-zinc-500 font-semibold uppercase mt-1">
               This Month
@@ -195,7 +196,7 @@ export default function Dashboard() {
           </div>
           <div>
             <h3 className="text-xl font-bold tracking-tight text-rose-400 mt-4">
-              {formatCurrency(stats.expense)}
+              <CurrencyValue value={stats.expense} className="currency-value--display" />
             </h3>
             <p className="text-[10px] text-zinc-500 font-semibold uppercase mt-1">
               This Month
@@ -215,7 +216,7 @@ export default function Dashboard() {
           </div>
           <div>
             <h3 className="text-xl font-bold tracking-tight text-white mt-4">
-              {formatCurrency(stats.savings)}
+              <CurrencyValue value={stats.savings} className="currency-value--display" />
             </h3>
             <div className="w-full bg-zinc-950 rounded-full h-1.5 mt-2">
               <div
@@ -292,7 +293,7 @@ export default function Dashboard() {
               <span
                 className={`text-sm font-bold ${totals.cash < 0 ? "text-rose-500" : "text-zinc-200"}`}
               >
-                {formatCurrency(totals.cash)}
+                <CurrencyValue value={totals.cash} />
               </span>
             </div>
 
@@ -312,7 +313,7 @@ export default function Dashboard() {
               <span
                 className={`text-sm font-bold ${totals.creditCard < 0 ? "text-rose-500" : "text-zinc-200"}`}
               >
-                {formatCurrency(totals.creditCard)}
+                <CurrencyValue value={totals.creditCard} />
               </span>
             </div>
 
@@ -339,7 +340,7 @@ export default function Dashboard() {
                   <span
                     className={`text-sm font-bold ${totals.bank < 0 ? "text-rose-500" : "text-zinc-200"}`}
                   >
-                    {formatCurrency(totals.bank)}
+                    <CurrencyValue value={totals.bank} />
                   </span>
                   {expandedSource === "bank" ? (
                     <ChevronUp className="w-4 h-4 text-zinc-500" />
@@ -362,7 +363,7 @@ export default function Dashboard() {
                         <span
                           className={`font-bold ${bal < 0 ? "text-rose-500" : "text-zinc-200"}`}
                         >
-                          {formatCurrency(bal)}
+                          <CurrencyValue value={bal} />
                         </span>
                       </div>
                     ),
@@ -392,7 +393,7 @@ export default function Dashboard() {
                   <span
                     className={`text-sm font-bold ${totals.wallet < 0 ? "text-rose-500" : "text-zinc-200"}`}
                   >
-                    {formatCurrency(totals.wallet)}
+                    <CurrencyValue value={totals.wallet} />
                   </span>
                   {expandedSource === "wallet" ? (
                     <ChevronUp className="w-4 h-4 text-zinc-500" />
@@ -415,7 +416,7 @@ export default function Dashboard() {
                         <span
                           className={`font-bold ${bal < 0 ? "text-rose-500" : "text-zinc-200"}`}
                         >
-                          {formatCurrency(bal)}
+                          <CurrencyValue value={bal} />
                         </span>
                       </div>
                     ),
@@ -447,7 +448,7 @@ export default function Dashboard() {
                   <span
                     className={`text-sm font-bold ${totals.mobileBanking < 0 ? "text-rose-500" : "text-zinc-200"}`}
                   >
-                    {formatCurrency(totals.mobileBanking)}
+                    <CurrencyValue value={totals.mobileBanking} />
                   </span>
                   {expandedSource === "mobile" ? (
                     <ChevronUp className="w-4 h-4 text-zinc-500" />
@@ -471,7 +472,7 @@ export default function Dashboard() {
                           <span
                             className={`font-bold ${bal < 0 ? "text-rose-500" : "text-zinc-200"}`}
                           >
-                            {formatCurrency(bal)}
+                            <CurrencyValue value={bal} />
                           </span>
                         </div>
                       ),
@@ -673,7 +674,7 @@ export default function Dashboard() {
                           className={`text-xs font-bold shrink-0 ${isIncome ? "text-emerald-400" : "text-zinc-300"}`}
                         >
                           {isIncome ? "+" : "-"}
-                          {formatCurrency(tx.amount)}
+                          <CurrencyValue value={tx.amount} sign={isIncome ? "+" : "-"} className="currency-value--cell" />
                         </span>
 
                         {/* Quick Delete */}

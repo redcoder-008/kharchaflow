@@ -22,7 +22,7 @@ import { formatDate, formatMonth, formatCurrency } from "../utils/helpers";
 import { createInAppNotification } from "../context/NotificationContext";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-const fmt = (n) => formatCurrency(n, "INR");
+const fmt = (n) => formatCurrency(n);
 
 const fmtNum = (n) => new Intl.NumberFormat("en-IN").format(n ?? 0);
 const toDate = (value) => {

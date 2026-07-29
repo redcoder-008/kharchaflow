@@ -3,7 +3,7 @@ import BrandLogo from "../components/ui/BrandLogo";
 
 export default function Download() {
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-5 relative overflow-hidden">
+    <main className="min-h-dvh mobile-safe-top bg-zinc-950 text-zinc-100 flex items-center justify-center p-5 relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#10b9811f,transparent_42%)] pointer-events-none" />
       <section className="relative w-full max-w-md text-center">
         <div className="w-24 h-24 mx-auto mb-6 rounded-3xl bg-zinc-900 border border-emerald-500/25 shadow-[0_0_36px_rgba(16,185,129,0.16)] p-1.5">

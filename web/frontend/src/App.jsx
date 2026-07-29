@@ -93,7 +93,7 @@ function AppContent() {
   // Premium loading screen during app boot up
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-6 relative overflow-hidden bg-mesh-grid">
+      <div className="min-h-dvh mobile-safe-top bg-zinc-950 flex flex-col items-center justify-center gap-6 relative overflow-hidden bg-mesh-grid">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none"></div>
         <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/25 flex items-center justify-center text-indigo-400 mb-2 animate-bounce">
           <BrandLogo className="w-full h-full" />

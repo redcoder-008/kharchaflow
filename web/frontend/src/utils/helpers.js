@@ -3,7 +3,7 @@ import NepaliDateModule from "nepali-date-converter";
 // The package's ESM build wraps its constructor in a default property.
 const NepaliDate = NepaliDateModule.default || NepaliDateModule;
 
-const DEFAULT_CURRENCY = "INR";
+const DEFAULT_CURRENCY = "NPR";
 const CURRENCY_LOCALES = {
   INR: "en-IN",
   NPR: "en-NP",
@@ -37,6 +37,21 @@ export const formatCurrency = (value, currencyCode = getPreferredCurrency()) => 
 
   if (isNaN(number)) return formatter.format(0);
   return formatter.format(number);
+};
+
+// Compact labels keep chart axes readable without changing the full-value
+// currency formatting used in cards, tables, and reports.
+export const formatCompactCurrency = (value, currencyCode = getPreferredCurrency()) => {
+  const number = Number(value);
+  const locale = CURRENCY_LOCALES[currencyCode] || "en-US";
+  const formatter = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: currencyCode,
+    notation: "compact",
+    maximumFractionDigits: 1
+  });
+
+  return formatter.format(Number.isFinite(number) ? number : 0);
 };
 
 const parseStoredDate = (dateString) => new Date(`${dateString}T12:00:00`);

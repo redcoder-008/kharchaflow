@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useFinance } from "../context/FinanceContext";
 import { useCalendar } from "../context/CalendarContext";
-import { formatCurrency, formatMonth, formatWeekday } from "../utils/helpers";
+import { formatCompactCurrency, formatCurrency, formatMonth, formatWeekday } from "../utils/helpers";
+import CurrencyValue from "../components/ui/CurrencyValue";
 import { CATEGORIES } from "../utils/constants";
 import { 
   AreaChart, 
@@ -199,9 +200,9 @@ export default function Analytics() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="finance-card"><p className="text-[10px] uppercase tracking-wider font-bold text-zinc-500">Total Income</p><p className="mt-2 text-xl font-bold text-emerald-400">{formatCurrency(monthlyTotals.income)}</p></div>
-        <div className="finance-card"><p className="text-[10px] uppercase tracking-wider font-bold text-zinc-500">Total Expenses</p><p className="mt-2 text-xl font-bold text-rose-400">{formatCurrency(monthlyTotals.expense)}</p></div>
-        <div className="finance-card"><p className="text-[10px] uppercase tracking-wider font-bold text-zinc-500">Net Savings</p><p className={`mt-2 text-xl font-bold ${monthlyTotals.income - monthlyTotals.expense >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{formatCurrency(monthlyTotals.income - monthlyTotals.expense)}</p></div>
+        <div className="finance-card"><p className="text-[10px] uppercase tracking-wider font-bold text-zinc-500">Total Income</p><p className="mt-2 text-xl font-bold text-emerald-400"><CurrencyValue value={monthlyTotals.income} className="currency-value--display" /></p></div>
+        <div className="finance-card"><p className="text-[10px] uppercase tracking-wider font-bold text-zinc-500">Total Expenses</p><p className="mt-2 text-xl font-bold text-rose-400"><CurrencyValue value={monthlyTotals.expense} className="currency-value--display" /></p></div>
+        <div className="finance-card"><p className="text-[10px] uppercase tracking-wider font-bold text-zinc-500">Net Savings</p><p className={`mt-2 text-xl font-bold ${monthlyTotals.income - monthlyTotals.expense >= 0 ? "text-emerald-400" : "text-rose-400"}`}><CurrencyValue value={monthlyTotals.income - monthlyTotals.expense} className="currency-value--display" /></p></div>
       </div>
       
       {/* 1. Header Trend Area */}
@@ -292,7 +293,7 @@ export default function Analytics() {
           <div className="py-12 text-center text-xs text-zinc-500">No expense categories recorded for this month.</div>
         ) : (
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%"><BarChart data={categoryBreakdown} layout="vertical" margin={{ left: 8, right: 16 }}><CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} /><XAxis type="number" tick={{ fill: "#71717a", fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(value) => formatCurrency(value)} /><YAxis type="category" dataKey="name" width={92} tick={{ fill: "#a1a1aa", fontSize: 11 }} tickLine={false} axisLine={false} /><Tooltip formatter={(value) => formatCurrency(value)} contentStyle={{ background: "#18181b", border: "1px solid #27272a", borderRadius: "12px", fontSize: "12px" }} /><Bar dataKey="amount" name="Expenses" fill="#10b981" radius={[0, 6, 6, 0]} /></BarChart></ResponsiveContainer>
+            <ResponsiveContainer width="100%" height="100%"><BarChart data={categoryBreakdown} layout="vertical" margin={{ left: 8, right: 16 }}><CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} /><XAxis type="number" tick={{ fill: "#71717a", fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(value) => formatCompactCurrency(value)} /><YAxis type="category" dataKey="name" width={92} tick={{ fill: "#a1a1aa", fontSize: 11 }} tickLine={false} axisLine={false} /><Tooltip formatter={(value) => formatCurrency(value)} contentStyle={{ background: "#18181b", border: "1px solid #27272a", borderRadius: "12px", fontSize: "12px" }} /><Bar dataKey="amount" name="Expenses" fill="#10b981" radius={[0, 6, 6, 0]} /></BarChart></ResponsiveContainer>
           </div>
         )}
       </div>
@@ -329,10 +330,10 @@ export default function Analytics() {
                   return (
                     <tr key={month.month} className="hover:bg-zinc-950/30 transition-colors">
                       <td className="py-3.5 pl-2 font-bold text-zinc-200">{month.label}</td>
-                      <td className="py-3.5 text-right font-semibold text-emerald-400">{formatCurrency(month.income)}</td>
-                      <td className="py-3.5 text-right font-semibold text-rose-400">{formatCurrency(month.expense)}</td>
+                      <td className="py-3.5 text-right font-semibold text-emerald-400"><CurrencyValue value={month.income} className="currency-value--cell" /></td>
+                      <td className="py-3.5 text-right font-semibold text-rose-400"><CurrencyValue value={month.expense} className="currency-value--cell" /></td>
                       <td className={`py-3.5 text-right font-bold ${isSaving ? "text-emerald-400" : "text-rose-400"}`}>
-                        {isSaving ? "+" : "-"}{formatCurrency(Math.abs(month.savings))}
+                        <CurrencyValue value={Math.abs(month.savings)} sign={isSaving ? "+" : "-"} className="currency-value--cell" />
                       </td>
                       <td className="py-3.5 text-right pr-2">
                         <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${isSaving ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"}`}>
