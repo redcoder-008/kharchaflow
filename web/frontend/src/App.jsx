@@ -11,26 +11,15 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import History from "./pages/History";
 import Analytics from "./pages/Analytics";
-import Goals from "./pages/Goals";
 import Settings from "./pages/Settings";
 import Admin from "./pages/Admin";
 import DownloadPage from "./pages/Download";
 import AddTransactionModal from "./components/transactions/AddTransactionModal";
 import PageSkeleton from "./components/ui/PageSkeleton";
 import BrandLogo from "./components/ui/BrandLogo";
-import { TrendingUp, Download, X } from "lucide-react";
 
-// Returns true when the page is running inside the installed Android APK
-// (Capacitor sets window.Capacitor; Android WebView adds "wv" or "Version/X.Y" to the UA).
 function isRunningInApk() {
-  if (typeof window === "undefined") return false;
-  if (window.Capacitor?.isNativePlatform?.() || window.Capacitor?.platform)
-    return true;
-  const ua = navigator.userAgent || "";
-  // "wv" or "Version/4.0" (standard WebView indicator) check
-  return (
-    /Android/i.test(ua) && (/wv/i.test(ua) || /Version\/\d+\.\d+/i.test(ua))
-  );
+  return Boolean(window.Capacitor?.isNativePlatform?.() || window.Capacitor?.platform);
 }
 
 function AppContent() {
@@ -38,18 +27,8 @@ function AppContent() {
   const { loading: financeLoading } = useFinance();
   const [activePage, setActivePage] = useState("dashboard");
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
-  // Never show the APK download banner when already running inside the APK.
+  // The download entry now lives in the mobile top bar; keep the legacy banner hidden.
   const [showApkBanner, setShowApkBanner] = useState(false);
-
-  useEffect(() => {
-    // Determine banner visibility after mount to ensure Capacitor has initialized
-    const checkApkStatus = () => {
-      setShowApkBanner(!isRunningInApk());
-    };
-    checkApkStatus();
-    const timer = setTimeout(checkApkStatus, 500);
-    return () => clearTimeout(timer);
-  }, []);
 
   // Programmatically hide the splash screen when app loading finishes
   useEffect(() => {
@@ -130,8 +109,6 @@ function AppContent() {
         return <History />;
       case "analytics":
         return <Analytics />;
-      case "goals":
-        return <Goals />;
       case "settings":
         return <Settings />;
       case "admin":

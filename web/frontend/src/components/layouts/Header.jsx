@@ -6,6 +6,7 @@ import {
   Bell,
   CheckCheck,
   BellRing,
+  Download,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useFinance } from "../../context/FinanceContext";
@@ -49,8 +50,6 @@ export default function Header({ activePage, setActivePage }) {
         return "Transaction History";
       case "analytics":
         return "Insights & Analytics";
-      case "goals":
-        return "Financial Goals";
       case "settings":
         return "App Settings";
       case "admin":
@@ -103,10 +102,18 @@ export default function Header({ activePage, setActivePage }) {
 
         {/* Right Section: User Profile & Quick Actions */}
         {user && (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3">
+            <a
+              href="/download"
+              className="md:hidden p-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+              aria-label="Download Android app"
+            >
+              <Download className="w-4 h-4" />
+            </a>
+
             {/* Sync Status Indicator */}
             {!isDemoMode && syncStatus && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-zinc-800 bg-zinc-900/50">
+              <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-zinc-800 bg-zinc-900/50">
                 {syncStatus === "synced" && (
                   <>
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
